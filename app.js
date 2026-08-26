@@ -5,7 +5,7 @@
   'use strict';
   
   // ===== SECURITY: DOMAIN WHITELIST CHECK =====
-  const ALLOWED_DOMAINS = ['localhost', '127.0.0.1', 'h4sxmy.xyz', 'www.h4sxmy.xyz'];
+  const ALLOWED_DOMAINS = ['localhost', '127.0.0.1', 'h4sxmy.xyz', 'www.h4sxmy.xyz', 'link.h4sxmy.xyz'];
   const currentDomain = window.location.hostname;
   
   if (!ALLOWED_DOMAINS.includes(currentDomain)) {
