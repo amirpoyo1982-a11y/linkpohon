@@ -7,7 +7,8 @@ const SECURITY_CONFIG = {
     'localhost',
     '127.0.0.1',
     'h4sxmy.xyz',
-    'www.h4sxmy.xyz'
+    'www.h4sxmy.xyz',
+	'www.link.h4sxmy.xyz'
     // Add more domains as needed
   ],
   
