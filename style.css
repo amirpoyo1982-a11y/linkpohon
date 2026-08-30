@@ -16,6 +16,15 @@
   --warning:#f59e0b;
   --border:rgba(255,255,255,0.15);
   --shadow:0 8px 40px rgba(255,111,181,0.2);
+  /* Blur tiers — kept as variables so mobile can dial them down.
+     backdrop-filter is one of the heaviest GPU ops on phones, and it's
+     used on ~10 different elements (some repeated per-link), so this is
+     the main lever for reducing scroll/render lag on mid-range phones. */
+  --blur-8:8px;
+  --blur-12:12px;
+  --blur-16:16px;
+  --blur-18:18px;
+  --blur-20:20px;
 }
 [data-theme="light"]{
   --bg:#fff5f9;
@@ -139,7 +148,7 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 }
 .icon-btn{
   width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;
-  background:var(--card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  background:var(--card);backdrop-filter:blur(var(--blur-12));-webkit-backdrop-filter:blur(var(--blur-12));
   border:1px solid var(--border);color:var(--muted);cursor:pointer;
   transition:all 0.3s ease;position:relative;
 }
@@ -152,7 +161,7 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 /* ===== PROFILE CARD ===== */
 .profile-card{
   max-width:440px;margin:0 auto;
-  background:var(--card);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  background:var(--card);backdrop-filter:blur(var(--blur-20));-webkit-backdrop-filter:blur(var(--blur-20));
   border:1px solid var(--border);border-radius:28px;padding:32px 24px 24px;text-align:center;
   box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,0.15);
   animation:fadeUp 0.8s ease forwards;opacity:0;transition:all 0.4s ease;
@@ -205,7 +214,7 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 .search-wrap{max-width:440px;margin:20px auto 0;opacity:0;animation:fadeUp 0.6s ease 0.3s forwards;position:relative}
 .search-box{
   width:100%;padding:12px 16px 12px 44px;border-radius:14px;
-  background:var(--card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  background:var(--card);backdrop-filter:blur(var(--blur-12));-webkit-backdrop-filter:blur(var(--blur-12));
   border:1px solid var(--border);color:var(--text);font-family:'Archivo',sans-serif;font-size:14px;outline:none;
   transition:all 0.3s ease;
 }
@@ -221,7 +230,7 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 .category-tabs::-webkit-scrollbar{display:none}
 .tab-btn{
   padding:8px 16px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;
-  background:var(--card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  background:var(--card);backdrop-filter:blur(var(--blur-12));-webkit-backdrop-filter:blur(var(--blur-12));
   border:1px solid var(--border);color:var(--muted);cursor:pointer;
   transition:all 0.3s ease;font-family:'Archivo',sans-serif;
 }
@@ -236,7 +245,7 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 }
 .link-btn{
   display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;margin-bottom:10px;
-  background:var(--card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  background:var(--card);backdrop-filter:blur(var(--blur-16));-webkit-backdrop-filter:blur(var(--blur-16));
   border:1px solid var(--border);border-radius:16px;color:var(--text);text-decoration:none;
   font-family:'Archivo',sans-serif;font-size:14px;font-weight:500;
   transition:all 0.3s cubic-bezier(0.4,0,0.2,1);cursor:pointer;position:relative;overflow:hidden;
@@ -274,7 +283,7 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 .social-row{display:flex;justify-content:center;gap:12px;margin-top:28px;opacity:0;animation:fadeUp 0.6s ease 0.8s forwards;flex-wrap:wrap}
 .social-btn{
   width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;
-  background:var(--card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  background:var(--card);backdrop-filter:blur(var(--blur-12));-webkit-backdrop-filter:blur(var(--blur-12));
   border:1px solid var(--border);color:var(--muted);text-decoration:none;transition:all 0.3s ease;
 }
 .social-btn:hover{
@@ -296,7 +305,7 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 
 /* ===== MODALS ===== */
 .modal-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(var(--blur-8));-webkit-backdrop-filter:blur(var(--blur-8));
   z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;
   animation:fadeIn 0.3s ease;
 }
@@ -431,7 +440,7 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 /* ===== MUSIC PLAYER ===== */
 .music-player{
   position:fixed;bottom:0;left:0;right:0;
-  background:var(--bg2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  background:var(--bg2);backdrop-filter:blur(var(--blur-20));-webkit-backdrop-filter:blur(var(--blur-20));
   border-top:1px solid var(--border);padding:16px 20px;z-index:100;
   display:flex;align-items:center;gap:16px;
   box-shadow:0 -4px 30px rgba(255,111,181,0.2);
@@ -481,7 +490,7 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 @media (min-width: 1200px){ .side-widget{display:flex} }
 
 .widget-card{
-  background:var(--card);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  background:var(--card);backdrop-filter:blur(var(--blur-18));-webkit-backdrop-filter:blur(var(--blur-18));
   border:1px solid var(--border);border-radius:20px;padding:16px 18px;
   box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,0.15);
   opacity:0;animation:fadeUp 0.7s ease 0.5s forwards;
@@ -516,7 +525,7 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 .featured-card{
   position:relative;overflow:hidden;
   background:linear-gradient(135deg, rgba(255,111,181,0.18), rgba(217,70,239,0.12));
-  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  backdrop-filter:blur(var(--blur-18));-webkit-backdrop-filter:blur(var(--blur-18));
   border:1px solid rgba(255,111,181,0.45);border-radius:22px;padding:20px;
   box-shadow:0 10px 40px rgba(255,111,181,0.25), inset 0 1px 0 rgba(255,255,255,0.2);
   opacity:0;animation:fadeUp 0.7s ease 0.55s forwards;
@@ -570,4 +579,48 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 @keyframes moonPulse{
   0%,100%{transform:scale(1);opacity:0.6}
   50%{transform:scale(1.15);opacity:0.9}
+}
+
+/* ═══════════════════════════════════════════
+   RE-RENDER: skip entrance animation replay
+   (search/filter re-renders the link list — only the FIRST paint
+   should get the staggered fade-up, otherwise every keystroke jitters)
+═══════════════════════════════════════════ */
+.links-wrap.no-entrance .link-btn,
+.links-wrap.no-entrance .category-title{
+  opacity:1;
+  animation:none;
+}
+
+/* ═══════════════════════════════════════════
+   MOBILE PERFORMANCE
+   backdrop-filter (blur) is the single heaviest paint/composite cost
+   on phone GPUs, and it's used on ~10 elements here, several repeated
+   per link — so this is the main lever for less scroll/typing lag.
+   Values below are lighter but keep the same glass-card look.
+═══════════════════════════════════════════ */
+@media (max-width: 768px){
+  :root{
+    --blur-8:4px;
+    --blur-12:6px;
+    --blur-16:6px;
+    --blur-18:8px;
+    --blur-20:8px;
+  }
+  /* Compensate visually for the lighter blur with a touch more opacity */
+  :root{ --card:rgba(255,255,255,0.14); }
+  [data-theme="light"]{ --card:rgba(255,255,255,0.82); }
+  .bg-img{ animation-duration:40s; } /* slower = fewer repaints/sec */
+}
+
+/* Respect the OS-level "reduce motion" setting: turns off decorative
+   background motion (particles, sakura, glow, rays) for people who've
+   asked for it, and it's a free perf win on old phones too. */
+@media (prefers-reduced-motion: reduce){
+  .particle,.sakura-petal,.light-ray,.bg-img,.moon-glow{
+    animation:none !important;
+  }
+  *{
+    scroll-behavior:auto !important;
+  }
 }

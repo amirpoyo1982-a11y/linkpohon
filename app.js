@@ -372,6 +372,7 @@
     datalist.innerHTML = cats.map(c=>'<option value="'+c+'">').join('');
   }
   
+  let _linksRenderedOnce = false;
   function renderLinks(){
     const container = document.getElementById('linksContainer');
     let filtered = appData.links;
@@ -431,6 +432,11 @@
     });
     
     container.innerHTML = html;
+    // Only play the staggered fade-up entrance on the very first paint —
+    // re-running it on every search keystroke/filter click just adds
+    // jank for no visual benefit.
+    container.classList.toggle('no-entrance', _linksRenderedOnce);
+    _linksRenderedOnce = true;
     
     container.querySelectorAll('.link-btn').forEach(btn=>{
       btn.addEventListener('click', function(e){
@@ -585,9 +591,17 @@
   }
   
   function setupBackgroundEffects(){
+    // Fewer floating decorations on small/low-power screens — this is the
+    // biggest visual-effect cost on phones, so scale it down there.
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const particleCount = prefersReduced ? 0 : (isMobile ? 10 : 25);
+    const petalCount = prefersReduced ? 0 : (isMobile ? 14 : 35);
+
     // Floating particles
     const particlesContainer = document.getElementById('particlesContainer');
-    for(let i=0;i<25;i++){
+    const particleFrag = document.createDocumentFragment();
+    for(let i=0;i<particleCount;i++){
       const particle = document.createElement('div');
       particle.className = 'particle';
       particle.style.left = Math.random()*100 + '%';
@@ -597,12 +611,13 @@
       const size = Math.random()*3+2;
       particle.style.width = size + 'px';
       particle.style.height = size + 'px';
-      particlesContainer.appendChild(particle);
+      particleFrag.appendChild(particle);
     }
+    particlesContainer.appendChild(particleFrag);
     
     // 3D Sakura petals
     const sakuraContainer = document.getElementById('sakuraContainer');
-    const petalCount = 35;
+    const sakuraFrag = document.createDocumentFragment();
     for(let j=0;j<petalCount;j++){
       const petal = document.createElement('div');
       petal.className = 'sakura-petal';
@@ -615,8 +630,19 @@
       // Random hue variation for petals
       const hue = 330 + Math.random()*30;
       petal.style.background = `radial-gradient(ellipse at 30% 30%, hsl(${hue}, 100%, 95%) 0%, hsl(${hue}, 80%, 75%) 30%, hsl(${hue}, 90%, 60%) 60%, hsl(${hue}, 100%, 50%) 100%)`;
-      sakuraContainer.appendChild(petal);
+      sakuraFrag.appendChild(petal);
     }
+    sakuraContainer.appendChild(sakuraFrag);
+
+    // Pause the whole decorative layer while the tab/app is in the
+    // background — no point burning CPU/battery on an invisible screen.
+    const bgWrap = document.getElementById('bgWrap');
+    document.addEventListener('visibilitychange', ()=>{
+      if(bgWrap) bgWrap.style.animationPlayState = document.hidden ? 'paused' : 'running';
+      document.querySelectorAll('.particle, .sakura-petal').forEach(el=>{
+        el.style.animationPlayState = document.hidden ? 'paused' : 'running';
+      });
+    });
   }
   
   // MODAL CONTROL
@@ -879,12 +905,18 @@
       else{ resumeMusic(); }
     });
     
+    let _scrollTicking = false;
     window.addEventListener('scroll', ()=>{
-      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const scrollPercent = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
-      document.getElementById('scrollProgress').style.width = scrollPercent + '%';
-    });
+      if(_scrollTicking) return;
+      _scrollTicking = true;
+      requestAnimationFrame(()=>{
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrollPercent = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+        document.getElementById('scrollProgress').style.width = scrollPercent + '%';
+        _scrollTicking = false;
+      });
+    }, { passive: true });
     
     document.getElementById('loginBtn').addEventListener('click', ()=>{
       if(currentUser){
@@ -939,9 +971,14 @@
       if(currentUser && isFirebaseReady){ saveToFirebase('settings/theme', newTheme).catch(()=>{}); }
     });
     
+    let _searchDebounce = null;
     document.getElementById('searchInput').addEventListener('input', (e)=>{
-      searchQuery = e.target.value;
-      renderLinks();
+      const val = e.target.value;
+      clearTimeout(_searchDebounce);
+      _searchDebounce = setTimeout(()=>{
+        searchQuery = val;
+        renderLinks();
+      }, 180);
     });
     
     const shareBtn = document.getElementById('shareBtn');
