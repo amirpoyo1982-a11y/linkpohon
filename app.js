@@ -155,6 +155,8 @@
     },
     settings: {
       accentColor: '#ff6fb5',
+      gradientA: '#ff6fb5',
+      gradientB: '#ba55d3',
       theme: 'dark',
       socials: {
         whatsapp: '#',
@@ -293,12 +295,63 @@
   }
   
   // RENDER FUNCTIONS
+  function normalizeHex(v){
+    if(!v) return null;
+    v = v.trim();
+    if(v[0] !== '#') v = '#' + v;
+    return /^#[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : null;
+  }
+  function hexToRgbStr(hex){
+    const h = normalizeHex(hex) || '#ff6fb5';
+    const r = parseInt(h.slice(1,3),16), g = parseInt(h.slice(3,5),16), b = parseInt(h.slice(5,7),16);
+    return r + ',' + g + ',' + b;
+  }
+  function hexToHue(hex){
+    const h = normalizeHex(hex) || '#ff6fb5';
+    let r = parseInt(h.slice(1,3),16)/255, g = parseInt(h.slice(3,5),16)/255, b = parseInt(h.slice(5,7),16)/255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    let hue = 0;
+    if(max !== min){
+      const d = max - min;
+      if(max === r) hue = ((g-b)/d + (g<b?6:0));
+      else if(max === g) hue = (b-r)/d + 2;
+      else hue = (r-g)/d + 4;
+      hue *= 60;
+    }
+    return hue;
+  }
+  function updateThemePreview(a, b){
+    const bar = document.getElementById('themePreviewBar');
+    if(bar){ bar.style.setProperty('--tp-a', a); bar.style.setProperty('--tp-b', b); }
+  }
+  function populateThemePicker(){
+    const gradA = appData.settings.gradientA || '#ff6fb5';
+    const gradB = appData.settings.gradientB || '#ba55d3';
+    const accentC = appData.settings.accentColor || '#ff6fb5';
+    document.getElementById('pickGradA').value = gradA;
+    document.getElementById('hexGradA').value = gradA.toUpperCase();
+    document.getElementById('pickGradB').value = gradB;
+    document.getElementById('hexGradB').value = gradB.toUpperCase();
+    document.getElementById('pickAccent').value = accentC;
+    document.getElementById('hexAccent').value = accentC.toUpperCase();
+    updateThemePreview(gradA, gradB);
+    document.querySelectorAll('.theme-preset-btn').forEach(btn=>{
+      btn.classList.toggle('active', btn.dataset.a.toLowerCase()===gradA.toLowerCase() && btn.dataset.b.toLowerCase()===gradB.toLowerCase());
+    });
+  }
   function applyTheme(){
     document.body.setAttribute('data-theme', appData.settings.theme);
     document.documentElement.style.setProperty('--accent', appData.settings.accentColor);
     const hex = appData.settings.accentColor;
     const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
     document.documentElement.style.setProperty('--accent-soft', `rgba(${r},${g},${b},0.2)`);
+    // Custom background gradient — this is what actually paints the
+    // page background, so it's what makes the theme feel fully custom
+    // instead of only the accent color changing.
+    const gradA = appData.settings.gradientA || appData.settings.accentColor || '#ff6fb5';
+    const gradB = appData.settings.gradientB || '#ba55d3';
+    document.documentElement.style.setProperty('--grad-a-rgb', hexToRgbStr(gradA));
+    document.documentElement.style.setProperty('--grad-b-rgb', hexToRgbStr(gradB));
   }
   
   function renderProfile(){
@@ -448,6 +501,7 @@
           firebaseDb.ref('gateway_data/links/' + id + '/clicks').transaction((currentClicks)=>{
             return (currentClicks || 0) + 1;
           }).catch(()=>{});
+          pushActivity('click', link.title);
         }
         const rect = this.getBoundingClientRect();
         createConfetti(e.clientX, e.clientY);
@@ -576,6 +630,107 @@
     }
   }
   
+  // ──────────────────────────────────────────
+  // 🆕 REAL VISITOR PRESENCE + VISIT COUNTER + ACTIVITY FEED
+  // Replaces the old fake Math.random() counters with real Firebase data
+  // shared across every visitor. Needs Firebase RTDB rules that allow
+  // public write to gateway_data/presence, gateway_data/stats and
+  // gateway_data/activity — see chat notes for the exact rules to paste.
+  // Every call is wrapped so a missing rule just means the counter stays
+  // at 0 instead of breaking the page.
+  // ──────────────────────────────────────────
+  let _activityInitialized = false;
+  let _lastActivityItems = [];
+  window._h4sxAnimateTo = null;
+
+  function setupPresenceAndVisits(animateTo, wOnlineEl, wVisitorsEl){
+    if(!isFirebaseReady) return;
+    try{
+      const presenceRef = firebaseDb.ref('gateway_data/presence').push();
+      presenceRef.set(true).then(()=>{ presenceRef.onDisconnect().remove(); }).catch(()=>{});
+
+      firebaseDb.ref('gateway_data/presence').on('value', (snap)=>{
+        animateTo(wOnlineEl, snap.exists() ? snap.numChildren() : 0);
+      }, ()=>{ /* rules not set yet — leave counter at 0 */ });
+
+      firebaseDb.ref('gateway_data/stats/totalVisits').on('value', (snap)=>{
+        animateTo(wVisitorsEl, snap.val() || 0);
+      }, ()=>{});
+
+      if(!sessionStorage.getItem('h4sx_visit_counted')){
+        sessionStorage.setItem('h4sx_visit_counted', '1');
+        firebaseDb.ref('gateway_data/stats/totalVisits').transaction(cur=>(cur||0)+1).catch(()=>{});
+        pushActivity('visit', null);
+      }
+    }catch(e){ /* best-effort only, never block the page */ }
+  }
+
+  function updateHotCounter(){
+    const wHot = document.getElementById('wHot');
+    if(!wHot) return;
+    const total = appData.links.reduce((sum,l)=>sum+(l.clicks||0),0);
+    if(window._h4sxAnimateTo) window._h4sxAnimateTo(wHot, total);
+    else wHot.textContent = total.toLocaleString();
+  }
+
+  function pushActivity(type, label){
+    if(!isFirebaseReady) return;
+    try{
+      const ref = firebaseDb.ref('gateway_data/activity').push();
+      ref.set({ type: type, label: label || null, ts: firebase.database.ServerValue.TIMESTAMP }).catch(()=>{});
+      // Occasionally trim old entries so the log doesn't grow forever
+      if(Math.random() < 0.1){
+        firebaseDb.ref('gateway_data/activity').orderByKey().limitToLast(200).once('value').then(snap=>{
+          const keys = [];
+          snap.forEach(c=>{ keys.push(c.key); });
+          const toRemove = keys.slice(0, Math.max(0, keys.length - 50));
+          toRemove.forEach(k=>{ firebaseDb.ref('gateway_data/activity/'+k).remove().catch(()=>{}); });
+        }).catch(()=>{});
+      }
+    }catch(e){}
+  }
+
+  function timeAgo(ts){
+    if(!ts) return '';
+    const diff = Math.max(0, Date.now() - ts);
+    const mins = Math.floor(diff/60000);
+    if(mins < 1) return 'baru saja';
+    if(mins < 60) return mins + ' minit lalu';
+    const hrs = Math.floor(mins/60);
+    if(hrs < 24) return hrs + ' jam lalu';
+    return Math.floor(hrs/24) + ' hari lalu';
+  }
+
+  function renderActivityFeed(items){
+    const container = document.getElementById('activityFeed');
+    if(!container) return;
+    if(!items || !items.length){
+      container.innerHTML = '<div class="activity-empty">Belum ada aktiviti...</div>';
+      return;
+    }
+    container.innerHTML = items.map(it=>{
+      const text = it.type === 'click'
+        ? 'Seseorang klik <b>' + escapeHtml(it.label || 'pautan') + '</b>'
+        : 'Pelawat baru melayari laman';
+      return '<div class="activity-item"><span class="a-dot"></span><span class="a-text">' + text + '<span class="a-time">' + timeAgo(it.ts) + '</span></span></div>';
+    }).join('');
+  }
+
+  function setupActivityFeedListener(){
+    if(!isFirebaseReady || _activityInitialized) return;
+    _activityInitialized = true;
+    try{
+      firebaseDb.ref('gateway_data/activity').orderByKey().limitToLast(8).on('value', (snap)=>{
+        const items = [];
+        snap.forEach(c=>{ items.push(c.val()); });
+        items.reverse();
+        _lastActivityItems = items;
+        renderActivityFeed(items);
+      }, ()=>{ renderActivityFeed([]); });
+      setInterval(()=>{ renderActivityFeed(_lastActivityItems); }, 30000);
+    }catch(e){}
+  }
+
   function renderAll(){
     try { applyTheme(); } catch(e) { console.error('applyTheme error:', e); }
     try { renderProfile(); } catch(e) { console.error('renderProfile error:', e); }
@@ -583,6 +738,7 @@
     try { renderCategoryTabs(); } catch(e) { console.error('renderCategoryTabs error:', e); }
     try { renderLinks(); } catch(e) { console.error('renderLinks error:', e); }
     try { renderSocials(); } catch(e) { console.error('renderSocials error:', e); }
+    try { updateHotCounter(); } catch(e) { console.error('updateHotCounter error:', e); }
     
     if(document.getElementById('adminModal').classList.contains('active')){
       try { renderAdminLinkList(); } catch(e) { console.error('renderAdminLinkList error:', e); }
@@ -627,8 +783,11 @@
       const psize = Math.random()*14+12;
       petal.style.width = psize + 'px';
       petal.style.height = psize + 'px';
-      // Random hue variation for petals
-      const hue = 330 + Math.random()*30;
+      // Petal hue now follows the admin's chosen Gradient 1 color instead
+      // of being locked to pink — so a custom theme reaches everything,
+      // not just the accent buttons.
+      const baseHue = hexToHue(appData.settings.gradientA || '#ff6fb5');
+      const hue = baseHue + (Math.random()*30 - 15);
       petal.style.background = `radial-gradient(ellipse at 30% 30%, hsl(${hue}, 100%, 95%) 0%, hsl(${hue}, 80%, 75%) 30%, hsl(${hue}, 90%, 60%) 60%, hsl(${hue}, 100%, 50%) 100%)`;
       sakuraFrag.appendChild(petal);
     }
@@ -667,9 +826,7 @@
     document.getElementById('socialIG').value = appData.settings.socials.instagram || '';
     document.getElementById('socialTT').value = appData.settings.socials.tiktok || '';
     document.getElementById('socialYT').value = appData.settings.socials.youtube || '';
-    document.querySelectorAll('#colorPicker .color-option').forEach(opt=>{
-      opt.classList.toggle('active', opt.dataset.color === appData.settings.accentColor);
-    });
+    populateThemePicker();
   }
   function closeAdminModal(){ document.getElementById('adminModal').classList.remove('active'); }
   function openLinkModal(isEdit=false){
@@ -823,18 +980,12 @@
     tickClock();
     setInterval(tickClock, 1000);
 
-    // 2) Live counters — smooth increment animation
+    // 2) Live counters — REAL data from Firebase (not simulated).
+    // "Online" = live presence, "Pelawat" = real shared visit count,
+    // "Jumlah Klik" = real sum of link clicks (kept in sync via renderAll).
     const wOnline   = document.getElementById('wOnline');
     const wHot      = document.getElementById('wHot');
     const wVisitors = document.getElementById('wVisitors');
-    // Session-persistent baselines so numbers feel real, not resetting on refresh
-    const seed = () => Math.floor(Math.random()*40)+50; // 50-89
-    let online   = Math.floor(Math.random()*18)+8;   // 8-25
-    let hot      = parseInt(sessionStorage.getItem('h4sx_hot')   || Math.floor(Math.random()*200+180), 10);
-    let visitors = parseInt(sessionStorage.getItem('h4sx_visits')|| Math.floor(Math.random()*900+420), 10);
-    // increment visitors on this visit
-    visitors += 1;
-    sessionStorage.setItem('h4sx_visits', visitors);
     const animateTo = (el, target) => {
       if(!el) return;
       const from = parseInt(el.textContent.replace(/,/g,''),10) || 0;
@@ -847,19 +998,12 @@
         if(i >= steps) clearInterval(timer);
       }, dur/steps);
     };
-    animateTo(wOnline, online);
-    animateTo(wHot, hot);
-    animateTo(wVisitors, visitors);
-    // Ticker: online fluctuates, hot creeps up
-    setInterval(()=>{
-      online = Math.max(4, Math.min(35, online + (Math.random()<0.5?-1:1) * (Math.random()<0.3?2:1)));
-      if(Math.random() < 0.55){
-        hot += Math.floor(Math.random()*3)+1;
-        sessionStorage.setItem('h4sx_hot', hot);
-        animateTo(wHot, hot);
-      }
-      animateTo(wOnline, online);
-    }, 6000);
+    window._h4sxAnimateTo = animateTo;
+    updateHotCounter();
+    if(isFirebaseReady){
+      setupPresenceAndVisits(animateTo, wOnline, wVisitors);
+      setupActivityFeedListener();
+    }
 
     // 3) QR code for current page URL
     const qrImg = document.getElementById('pageQR');
@@ -1130,24 +1274,62 @@
       saveToFirebase('profile', profileData);
     });
     
-    document.querySelectorAll('#colorPicker .color-option').forEach(opt=>{
-      opt.addEventListener('click', ()=>{
-        if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
-        document.querySelectorAll('#colorPicker .color-option').forEach(o=>o.classList.remove('active'));
-        opt.classList.add('active');
-        saveToFirebase('settings/accentColor', opt.dataset.color).catch(()=>{});
+    // Custom theme picker: color <-> hex sync + live preview
+    ['GradA','GradB','Accent'].forEach(key=>{
+      const colorInput = document.getElementById('pick'+key);
+      const hexInput = document.getElementById('hex'+key);
+      const syncFromColor = ()=>{
+        hexInput.value = colorInput.value.toUpperCase();
+        updateThemePreview(document.getElementById('pickGradA').value, document.getElementById('pickGradB').value);
+        document.querySelectorAll('.theme-preset-btn').forEach(b=>b.classList.remove('active'));
+      };
+      const syncFromHex = ()=>{
+        const norm = normalizeHex(hexInput.value);
+        if(norm){
+          colorInput.value = norm;
+          updateThemePreview(document.getElementById('pickGradA').value, document.getElementById('pickGradB').value);
+          document.querySelectorAll('.theme-preset-btn').forEach(b=>b.classList.remove('active'));
+        }
+      };
+      colorInput.addEventListener('input', syncFromColor);
+      hexInput.addEventListener('input', syncFromHex);
+    });
+
+    document.querySelectorAll('.theme-preset-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.getElementById('pickGradA').value = btn.dataset.a;
+        document.getElementById('hexGradA').value = btn.dataset.a.toUpperCase();
+        document.getElementById('pickGradB').value = btn.dataset.b;
+        document.getElementById('hexGradB').value = btn.dataset.b.toUpperCase();
+        document.getElementById('pickAccent').value = btn.dataset.accent;
+        document.getElementById('hexAccent').value = btn.dataset.accent.toUpperCase();
+        updateThemePreview(btn.dataset.a, btn.dataset.b);
+        document.querySelectorAll('.theme-preset-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
       });
     });
-    
+
     document.getElementById('saveSettingsBtn').addEventListener('click', ()=>{
       if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
+      const gradA    = normalizeHex(document.getElementById('hexGradA').value)   || appData.settings.gradientA   || '#ff6fb5';
+      const gradB    = normalizeHex(document.getElementById('hexGradB').value)   || appData.settings.gradientB   || '#ba55d3';
+      const accentC  = normalizeHex(document.getElementById('hexAccent').value)  || appData.settings.accentColor || '#ff6fb5';
       const socials = {
         whatsapp: document.getElementById('socialWA').value.trim() || '#',
         instagram: document.getElementById('socialIG').value.trim() || '#',
         tiktok: document.getElementById('socialTT').value.trim() || '#',
         youtube: document.getElementById('socialYT').value.trim() || '#'
       };
-      saveToFirebase('settings/socials', socials);
+      const newSettings = {
+        theme: appData.settings.theme || 'dark',
+        accentColor: accentC,
+        gradientA: gradA,
+        gradientB: gradB,
+        socials: socials
+      };
+      appData.settings = newSettings;
+      applyTheme();
+      saveToFirebase('settings', newSettings);
     });
     
     document.addEventListener('keydown', (e)=>{

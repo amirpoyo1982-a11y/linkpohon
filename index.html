@@ -25,12 +25,18 @@
       <span class="value" id="wOnline">0</span>
     </div>
     <div class="live-row">
-      <span class="label">🔥 Klik hari ni</span>
+      <span class="label">🔥 Jumlah Klik</span>
       <span class="value" id="wHot">0</span>
     </div>
     <div class="live-row">
-      <span class="label">👥 Visitors</span>
+      <span class="label">👥 Pelawat</span>
       <span class="value" id="wVisitors">0</span>
+    </div>
+  </div>
+  <div class="widget-card">
+    <div class="widget-title">Live Activity</div>
+    <div class="activity-feed" id="activityFeed">
+      <div class="activity-empty">Belum ada aktiviti...</div>
     </div>
   </div>
 </aside>
@@ -363,16 +369,35 @@
       <!-- TAB: SETTINGS -->
       <div id="tab-settings" class="tab-content" style="display:none">
         <div class="form-group">
-          <label class="form-label">Warna Tema Utama</label>
-          <div class="color-picker-wrap" id="colorPicker">
-            <div class="color-option active" style="background:#ff6fb5" data-color="#ff6fb5"></div>
-            <div class="color-option" style="background:#8b5cf6" data-color="#8b5cf6"></div>
-            <div class="color-option" style="background:#3b82f6" data-color="#3b82f6"></div>
-            <div class="color-option" style="background:#06b6d4" data-color="#06b6d4"></div>
-            <div class="color-option" style="background:#10b981" data-color="#10b981"></div>
-            <div class="color-option" style="background:#f59e0b" data-color="#f59e0b"></div>
-            <div class="color-option" style="background:#ef4444" data-color="#ef4444"></div>
-            <div class="color-option" style="background:#ec4899" data-color="#ec4899"></div>
+          <label class="form-label">Tema Warna Custom</label>
+          <div class="theme-preview-bar" id="themePreviewBar">PRATONTON LIVE</div>
+          <div class="theme-picker-grid">
+            <div class="color-field">
+              <label>Gradient 1</label>
+              <input type="color" id="pickGradA" value="#ff6fb5">
+              <input type="text" class="hex-input" id="hexGradA" value="#FF6FB5" maxlength="7">
+            </div>
+            <div class="color-field">
+              <label>Gradient 2</label>
+              <input type="color" id="pickGradB" value="#ba55d3">
+              <input type="text" class="hex-input" id="hexGradB" value="#BA55D3" maxlength="7">
+            </div>
+            <div class="color-field">
+              <label>Accent</label>
+              <input type="color" id="pickAccent" value="#ff6fb5">
+              <input type="text" class="hex-input" id="hexAccent" value="#FF6FB5" maxlength="7">
+            </div>
+          </div>
+          <label class="form-label">Preset Pantas (tekan untuk cuba, edit atas untuk custom)</label>
+          <div class="theme-presets-row" id="themePresets">
+            <div class="theme-preset-btn" data-name="Sakura" data-a="#ff6fb5" data-b="#ba55d3" data-accent="#ff6fb5" style="background:linear-gradient(135deg,#ff6fb5,#ba55d3)"></div>
+            <div class="theme-preset-btn" data-name="Neon" data-a="#00f0ff" data-b="#ff00e5" data-accent="#00f0ff" style="background:linear-gradient(135deg,#00f0ff,#ff00e5)"></div>
+            <div class="theme-preset-btn" data-name="Gold" data-a="#f2c14e" data-b="#8a5a1f" data-accent="#f2c14e" style="background:linear-gradient(135deg,#f2c14e,#8a5a1f)"></div>
+            <div class="theme-preset-btn" data-name="Ocean" data-a="#38bdf8" data-b="#0e4b8f" data-accent="#38bdf8" style="background:linear-gradient(135deg,#38bdf8,#0e4b8f)"></div>
+            <div class="theme-preset-btn" data-name="Emerald" data-a="#34d399" data-b="#065f46" data-accent="#34d399" style="background:linear-gradient(135deg,#34d399,#065f46)"></div>
+            <div class="theme-preset-btn" data-name="Crimson" data-a="#ef4444" data-b="#1a0a0a" data-accent="#ff6b6b" style="background:linear-gradient(135deg,#ef4444,#1a0a0a)"></div>
+            <div class="theme-preset-btn" data-name="Sunset" data-a="#fb923c" data-b="#7c2d92" data-accent="#fb923c" style="background:linear-gradient(135deg,#fb923c,#7c2d92)"></div>
+            <div class="theme-preset-btn" data-name="Mono" data-a="#9ca3af" data-b="#1f2937" data-accent="#e5e7eb" style="background:linear-gradient(135deg,#9ca3af,#1f2937)"></div>
           </div>
         </div>
         <div class="form-group">

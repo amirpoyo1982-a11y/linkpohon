@@ -16,6 +16,10 @@
   --warning:#f59e0b;
   --border:rgba(255,255,255,0.15);
   --shadow:0 8px 40px rgba(255,111,181,0.2);
+  /* Custom theme gradient — the 2 colors behind the whole background.
+     Overridden live by applyTheme() from admin settings. */
+  --grad-a-rgb:255,111,181;
+  --grad-b-rgb:186,85,211;
   /* Blur tiers — kept as variables so mobile can dial them down.
      backdrop-filter is one of the heaviest GPU ops on phones, and it's
      used on ~10 different elements (some repeated per-link), so this is
@@ -54,15 +58,15 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 .bg-overlay{
   position:absolute;inset:0;
   background:
-    radial-gradient(ellipse at 15% 25%, rgba(255,111,181,0.45), transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(255,182,193,0.35), transparent 55%),
-    radial-gradient(ellipse at 50% 100%, rgba(186,85,211,0.3), transparent 60%),
+    radial-gradient(ellipse at 15% 25%, rgba(var(--grad-a-rgb),0.45), transparent 55%),
+    radial-gradient(ellipse at 85% 75%, rgba(var(--grad-a-rgb),0.35), transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(var(--grad-b-rgb),0.3), transparent 60%),
     linear-gradient(180deg, rgba(26,10,31,0.5) 0%, rgba(26,10,31,0.88) 100%);
 }
 [data-theme="light"] .bg-overlay{
   background:
-    radial-gradient(ellipse at 15% 25%, rgba(255,111,181,0.25), transparent 55%),
-    radial-gradient(ellipse at 85% 75%, rgba(255,182,193,0.2), transparent 55%),
+    radial-gradient(ellipse at 15% 25%, rgba(var(--grad-a-rgb),0.25), transparent 55%),
+    radial-gradient(ellipse at 85% 75%, rgba(var(--grad-b-rgb),0.2), transparent 55%),
     linear-gradient(180deg, rgba(255,245,249,0.6) 0%, rgba(255,245,249,0.95) 100%);
 }
 @keyframes bgZoom{
@@ -86,7 +90,7 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 .particle{
   position:absolute;width:4px;height:4px;background:rgba(255,255,255,0.6);
   border-radius:50%;animation:particleFloat 12s ease-in-out infinite;
-  box-shadow:0 0 8px rgba(255,200,220,0.8);
+  box-shadow:0 0 8px rgba(var(--grad-a-rgb),0.8);
 }
 @keyframes particleFloat{
   0%,100%{transform:translateY(0) translateX(0);opacity:0.3}
@@ -392,6 +396,48 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 .color-option:hover{transform:scale(1.15)}
 .color-option.active{border-color:var(--text)}
 
+/* Custom theme color picker (Gradient A/B + Accent) */
+.theme-picker-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+@media (max-width:520px){.theme-picker-grid{grid-template-columns:1fr}}
+.color-field{
+  background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;
+  padding:12px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;
+}
+.color-field label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.color-field input[type="color"]{
+  -webkit-appearance:none;appearance:none;width:48px;height:48px;border:none;border-radius:50%;
+  cursor:pointer;background:none;padding:0;box-shadow:0 0 0 3px var(--border), 0 4px 16px rgba(0,0,0,0.3);
+}
+.color-field input[type="color"]::-webkit-color-swatch-wrapper{padding:0;border-radius:50%}
+.color-field input[type="color"]::-webkit-color-swatch{border:none;border-radius:50%}
+.color-field input[type="color"]::-moz-color-swatch{border:none;border-radius:50%}
+.color-field .hex-input{
+  width:100%;background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:8px;
+  padding:6px 8px;text-align:center;font-family:'Archivo',monospace;font-size:12px;color:var(--text);
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+.color-field .hex-input:focus{outline:none;border-color:var(--accent)}
+.theme-preview-bar{
+  height:52px;border-radius:14px;margin-bottom:16px;border:1px solid var(--border);
+  background:linear-gradient(120deg, var(--tp-a, #ff6fb5), var(--tp-b, #ba55d3));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:rgba(255,255,255,0.9);text-shadow:0 1px 4px rgba(0,0,0,0.5);
+  transition:background 0.25s ease;
+}
+.theme-presets-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.theme-preset-btn{
+  width:36px;height:36px;border-radius:12px;cursor:pointer;border:2px solid transparent;
+  transition:all 0.2s ease;position:relative;flex-shrink:0;
+}
+.theme-preset-btn:hover{transform:translateY(-2px) scale(1.06)}
+.theme-preset-btn.active{border-color:var(--text)}
+.theme-preset-btn::after{
+  content:attr(data-name);position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);
+  font-size:9px;color:var(--muted);white-space:nowrap;opacity:0;transition:opacity 0.2s ease;pointer-events:none;
+}
+.theme-preset-btn:hover::after{opacity:1}
+
 .share-menu{
   position:absolute;bottom:100%;right:0;margin-bottom:8px;
   background:var(--bg2);border:1px solid var(--border);border-radius:12px;
@@ -520,6 +566,25 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 .live-row .value{font-family:'Syne',sans-serif;font-weight:700;color:var(--accent);font-size:15px}
 .live-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;animation:pulseLive 1.6s ease-in-out infinite}
 @keyframes pulseLive{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.3)}}
+
+/* Live activity feed */
+.activity-feed{display:flex;flex-direction:column;gap:2px;max-height:180px;overflow-y:auto;scrollbar-width:thin}
+.activity-feed::-webkit-scrollbar{width:4px}
+.activity-feed::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.activity-item{
+  display:flex;align-items:flex-start;gap:8px;padding:7px 0;font-size:11.5px;line-height:1.4;
+  color:var(--muted);animation:activityIn 0.4s ease;
+}
+.activity-item + .activity-item{border-top:1px dashed var(--border)}
+.activity-item .a-dot{
+  width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0;
+  background:var(--accent);box-shadow:0 0 6px var(--accent);
+}
+.activity-item .a-text{flex:1;min-width:0}
+.activity-item .a-text b{color:var(--text);font-weight:700}
+.activity-item .a-time{display:block;font-size:9.5px;color:var(--muted);opacity:0.6;margin-top:1px}
+.activity-empty{font-size:11.5px;color:var(--muted);opacity:0.6;padding:8px 0;text-align:center}
+@keyframes activityIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 
 /* Featured card (right) */
 .featured-card{
