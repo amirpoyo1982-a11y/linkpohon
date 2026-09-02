@@ -464,9 +464,15 @@
         const iconHtml = link.iconUrl 
           ? '<img src="'+link.iconUrl+'" alt="" onerror="this.parentElement.innerHTML=\''+(link.icon||'')+'\'">'
           : (link.icon || '');
+        const maintOverlay = link.maintenance ? `
+            <div class="maintenance-badge">🚧 Maintenance</div>
+            <div class="maintenance-overlay">
+              <div class="maintenance-tape t1"><span>⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠</span></div>
+              <div class="maintenance-tape t2"><span>⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠</span></div>
+            </div>` : '';
         
         html += `
-          <a class="link-btn" href="${link.url}" target="_blank" data-id="${link.id}" style="animation-delay:${(idx*0.1 + i*0.08)+0.2}s">
+          <a class="link-btn${link.maintenance ? ' maintenance' : ''}" href="${link.url}" target="_blank" data-id="${link.id}" data-maintenance="${!!link.maintenance}" style="animation-delay:${(idx*0.1 + i*0.08)+0.2}s">
             <div class="link-icon">${iconHtml}</div>
             <div class="link-text">
               <div class="link-title">${escapeHtml(link.title)}</div>
@@ -479,6 +485,7 @@
                 <polyline points="12 5 19 12 12 19"/>
               </svg>
             </div>
+            ${maintOverlay}
           </a>
         `;
       });
@@ -495,6 +502,11 @@
       btn.addEventListener('click', function(e){
         const id = this.dataset.id;
         const link = appData.links.find(l=>l.id===id);
+        if(link && link.maintenance){
+          e.preventDefault();
+          showToast('🚧 "'+link.title+'" sedang dalam penyelenggaraan. Sila cuba sebentar lagi.', 'warning');
+          return;
+        }
         if(link && isFirebaseReady && !this.dataset.clicked){
           this.dataset.clicked = 'true';
           setTimeout(()=>delete this.dataset.clicked, 1000);
@@ -547,13 +559,14 @@
     let html = '';
     appData.links.forEach(link=>{
       html += `
-        <div class="link-list-item">
+        <div class="link-list-item${link.maintenance ? ' is-maintenance' : ''}">
           <div class="link-list-icon">${link.iconUrl ? '<img src="'+link.iconUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px" onerror="this.parentElement.innerHTML=\''+(link.icon||'')+'\'">' : (link.icon||'')}</div>
           <div class="link-list-info">
-            <div class="link-list-title">${escapeHtml(link.title)} ${link.clicks?'<span style="font-size:10px;color:var(--muted);margin-left:6px">'+link.clicks+'</span>':''}</div>
+            <div class="link-list-title">${escapeHtml(link.title)} ${link.maintenance ? '<span class="maintenance-chip">🚧 Maintenance</span>' : ''} ${link.clicks?'<span style="font-size:10px;color:var(--muted);margin-left:6px">'+link.clicks+'</span>':''}</div>
             <div class="link-list-url">${escapeHtml(link.url)}</div>
           </div>
           <div class="link-list-actions">
+            <button class="btn btn-sm btn-maint-toggle${link.maintenance ? ' is-active' : ''}" onclick="window.toggleMaintenance('${link.id}')" title="Toggle maintenance">🚧</button>
             <button class="btn btn-secondary btn-sm" onclick="window.editLink('${link.id}')">Edit</button>
             <button class="btn btn-danger btn-sm" onclick="window.deleteLink('${link.id}')">Padam</button>
           </div>
@@ -840,6 +853,7 @@
       document.getElementById('linkCategory').value = currentCategory === 'all' ? 'Utama' : currentCategory;
       document.getElementById('linkIcon').value = '';
       document.getElementById('linkIconUrl').value = '';
+      document.getElementById('linkMaintenance').checked = false;
     }
   }
   function closeLinkModal(){ document.getElementById('linkModal').classList.remove('active'); }
@@ -854,6 +868,7 @@
     document.getElementById('linkCategory').value = link.category || 'Utama';
     document.getElementById('linkIcon').value = link.icon || '';
     document.getElementById('linkIconUrl').value = link.iconUrl || '';
+    document.getElementById('linkMaintenance').checked = !!link.maintenance;
     openLinkModal(true);
   };
   
@@ -863,6 +878,18 @@
     firebaseDb.ref('gateway_data/links/' + id).remove()
       .then(()=>showToast('Pautan dipadam dari Firebase!'))
       .catch(e=>showToast('Gagal padam: '+e.message, 'error'));
+  };
+
+  // Quick flip a link in/out of maintenance mode without opening the
+  // full edit modal — handy when you just need to pause one link fast.
+  window.toggleMaintenance = function(id){
+    if(!currentUser){ showToast('Sila login!', 'warning'); return; }
+    const link = appData.links.find(l=>l.id===id);
+    if(!link) return;
+    const next = !link.maintenance;
+    firebaseDb.ref('gateway_data/links/' + id + '/maintenance').set(next)
+      .then(()=>showToast(next ? '🚧 Pautan ditandakan maintenance' : '✅ Pautan aktif semula'))
+      .catch(e=>showToast('Gagal kemaskini: '+e.message, 'error'));
   };
   
   // MUSIC PLAYER FUNCTIONS
@@ -1234,7 +1261,7 @@
       const url = document.getElementById('linkUrl').value.trim();
       if(!title || !url){ showToast('Tajuk dan URL wajib diisi!', 'warning'); return; }
       const editId = document.getElementById('editLinkId').value;
-      const linkData = { title, url, desc: document.getElementById('linkDesc').value.trim(), category: document.getElementById('linkCategory').value.trim() || 'Utama', icon: document.getElementById('linkIcon').value.trim(), iconUrl: document.getElementById('linkIconUrl').value.trim(), clicks: 0 };
+      const linkData = { title, url, desc: document.getElementById('linkDesc').value.trim(), category: document.getElementById('linkCategory').value.trim() || 'Utama', icon: document.getElementById('linkIcon').value.trim(), iconUrl: document.getElementById('linkIconUrl').value.trim(), maintenance: document.getElementById('linkMaintenance').checked, clicks: 0 };
       const btn = document.getElementById('saveLinkBtn');
       btn.disabled = true; btn.textContent = 'Menyimpan...';
       const doSave = ()=>{
