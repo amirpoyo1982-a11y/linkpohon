@@ -313,6 +313,85 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
   padding:3px 8px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.35);
 }
 
+/* ===== PINNED / FEATURED LINK ===== */
+.featured-link-wrap{max-width:640px;margin:0 auto 24px}
+.link-btn.pinned{
+  padding:22px;border-width:2px;border-color:rgba(var(--grad-a-rgb,255,111,181),0.5);
+  background:linear-gradient(160deg, rgba(var(--grad-a-rgb,255,111,181),0.14), var(--card));
+  box-shadow:0 12px 40px -8px rgba(var(--grad-a-rgb,255,111,181),0.35);
+  position:relative;
+}
+.link-btn.pinned::after{
+  content:'📌 FEATURED';position:absolute;top:-10px;left:20px;
+  background:linear-gradient(135deg,var(--accent),#ff85c2);color:#fff;
+  font-family:'Syne',sans-serif;font-weight:800;font-size:9.5px;letter-spacing:1.5px;
+  padding:4px 10px;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.3);
+}
+.link-btn.pinned .link-icon{width:56px;height:56px;font-size:26px}
+.link-btn.pinned .link-title{font-size:17px}
+.link-btn.pinned .link-desc{font-size:13px}
+
+/* ===== COUNTDOWN BADGE ===== */
+.countdown-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(239,68,68,0.14);border:1px solid rgba(239,68,68,0.35);
+  color:#ff8080;font-family:'Archivo',monospace;font-weight:700;font-size:11px;
+  padding:4px 9px;border-radius:8px;white-space:nowrap;margin-top:6px;
+}
+.countdown-badge.ending-soon{
+  background:rgba(239,68,68,0.22);animation:countdownPulse 1s ease-in-out infinite;
+}
+@keyframes countdownPulse{0%,100%{opacity:1}50%{opacity:0.6}}
+.link-schedule-note{
+  display:inline-flex;align-items:center;gap:5px;margin-top:6px;
+  font-size:10.5px;color:var(--muted);
+}
+
+/* ===== QR MODAL ===== */
+.qr-frame{
+  display:inline-flex;padding:16px;background:#fff;border-radius:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.3);
+}
+.qr-frame canvas{display:block;border-radius:6px}
+
+/* ===== ACHIEVEMENTS ===== */
+.achv-btn-dot{
+  position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;
+  background:#f2c14e;box-shadow:0 0 6px #f2c14e;animation:pulseLive 1.6s ease-in-out infinite;
+}
+.achv-progress-bar{
+  height:10px;border-radius:999px;background:rgba(255,255,255,0.08);
+  overflow:hidden;margin-bottom:8px;
+}
+.achv-progress-bar.mini{height:6px;margin-bottom:6px}
+.achv-progress-fill{
+  height:100%;width:0%;border-radius:999px;
+  background:linear-gradient(90deg,var(--accent),#f2c14e);
+  transition:width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+.achv-progress-label{font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px}
+.achv-mini-label{font-size:11px;color:var(--muted)}
+.widget-clickable{cursor:pointer;transition:all 0.2s ease}
+.widget-clickable:hover{border-color:var(--accent);transform:translateY(-2px)}
+.achv-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;
+}
+.achv-badge{
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;
+  padding:16px 10px;border-radius:14px;background:var(--card);border:1px solid var(--border);
+  transition:all 0.2s ease;
+}
+.achv-badge.unlocked{
+  border-color:rgba(242,193,78,0.4);
+  background:linear-gradient(160deg,rgba(242,193,78,0.12),var(--card));
+}
+.achv-badge.locked{opacity:0.45;filter:grayscale(0.6)}
+.achv-badge-icon{font-size:28px;line-height:1}
+.achv-badge-name{font-weight:700;font-size:12px;color:var(--text)}
+.achv-badge-desc{font-size:10px;color:var(--muted);line-height:1.4}
+.achv-badge.unlocked .achv-badge-date{font-size:9px;color:#f2c14e;margin-top:2px}
+.toast.achievement{background:linear-gradient(135deg,#f2c14e,#c9970f);box-shadow:0 8px 30px rgba(242,193,78,0.5)}
+
 /* ===== SOCIAL ROW ===== */
 .social-row{display:flex;justify-content:center;gap:12px;margin-top:28px;opacity:0;animation:fadeUp 0.6s ease 0.8s forwards;flex-wrap:wrap}
 .social-btn{
@@ -735,6 +814,11 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
   :root{ --card:rgba(255,255,255,0.14); }
   [data-theme="light"]{ --card:rgba(255,255,255,0.82); }
   .bg-img{ animation-duration:40s; } /* slower = fewer repaints/sec */
+  .qr-frame{padding:10px}
+  .qr-frame canvas{width:220px !important;height:220px !important}
+  .achv-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+  .link-btn.pinned{padding:16px}
+  .link-btn.pinned .link-icon{width:44px;height:44px;font-size:20px}
 }
 
 /* Respect the OS-level "reduce motion" setting: turns off decorative

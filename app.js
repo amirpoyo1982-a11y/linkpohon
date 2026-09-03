@@ -207,6 +207,10 @@
     renderAll();
     setupBackgroundEffects();
     hideLoading();
+    // 🆕 Gamification: first-visit / night-owl / returning-visitor checks,
+    // plus the live countdown ticker for any link with a countdown set.
+    window.checkAchievements('visit');
+    setInterval(tickCountdowns, 1000);
     if(!firebaseConfig.apiKey || firebaseConfig.apiKey === 'YOUR_API_KEY'){
       console.warn('Firebase belum disetup. Guna data laluan sahaja.');
       const notice = document.getElementById('firebaseNotice');
@@ -426,9 +430,89 @@
   }
   
   let _linksRenderedOnce = false;
+  function isLinkScheduleActive(link){
+    const now = Date.now();
+    if(link.scheduleStart){
+      const start = new Date(link.scheduleStart).getTime();
+      if(!isNaN(start) && now < start) return false;
+    }
+    if(link.scheduleEnd){
+      const end = new Date(link.scheduleEnd).getTime();
+      if(!isNaN(end) && now > end) return false;
+    }
+    return true;
+  }
+
+  function formatCountdown(ms){
+    if(ms <= 0) return null;
+    const s = Math.floor(ms/1000);
+    const days = Math.floor(s/86400);
+    const hrs = Math.floor((s%86400)/3600);
+    const mins = Math.floor((s%3600)/60);
+    const secs = s%60;
+    if(days > 0) return days + 'h ' + hrs + 'j';
+    if(hrs > 0) return hrs + 'j ' + mins + 'm ' + secs + 's';
+    return mins + 'm ' + secs + 's';
+  }
+
+  function tickCountdowns(){
+    document.querySelectorAll('.countdown-badge[data-end]').forEach(el=>{
+      const end = parseInt(el.dataset.end, 10);
+      const remain = end - Date.now();
+      if(remain <= 0){
+        el.textContent = '⏰ Tamat!';
+        el.classList.remove('ending-soon');
+        delete el.dataset.end;
+        return;
+      }
+      el.classList.toggle('ending-soon', remain < 3600000);
+      el.textContent = '⏳ ' + formatCountdown(remain);
+    });
+  }
+
+  function buildLinkCardHtml(link, delay, isPinned){
+    const iconHtml = link.iconUrl 
+      ? '<img src="'+link.iconUrl+'" alt="" onerror="this.parentElement.innerHTML=\''+(link.icon||'')+'\'">'
+      : (link.icon || '');
+    const maintOverlay = link.maintenance ? `
+        <div class="maintenance-badge">🚧 Maintenance</div>
+        <div class="maintenance-overlay">
+          <div class="maintenance-tape t1"><span>⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠</span></div>
+          <div class="maintenance-tape t2"><span>⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠</span></div>
+        </div>` : '';
+
+    let countdownHtml = '';
+    if(link.countdown){
+      const end = new Date(link.countdown).getTime();
+      const remain = end - Date.now();
+      if(!isNaN(end) && remain > 0){
+        countdownHtml = '<div class="countdown-badge'+(remain<3600000?' ending-soon':'')+'" data-end="'+end+'">⏳ '+formatCountdown(remain)+'</div>';
+      }
+    }
+
+    return `
+      <a class="link-btn${link.maintenance ? ' maintenance' : ''}${isPinned ? ' pinned' : ''}" href="${link.url}" target="_blank" data-id="${link.id}" data-maintenance="${!!link.maintenance}" style="animation-delay:${delay}s">
+        <div class="link-icon">${iconHtml}</div>
+        <div class="link-text">
+          <div class="link-title">${escapeHtml(link.title)}</div>
+          ${link.desc ? '<div class="link-desc">'+escapeHtml(link.desc)+'</div>' : ''}
+          ${countdownHtml}
+        </div>
+        <div class="link-meta">
+          ${link.clicks ? '<span class="click-count">'+link.clicks+'</span>' : ''}
+          <svg class="link-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+        ${maintOverlay}
+      </a>
+    `;
+  }
+
   function renderLinks(){
     const container = document.getElementById('linksContainer');
-    let filtered = appData.links;
+    let filtered = appData.links.filter(isLinkScheduleActive);
     
     if(currentCategory !== 'all'){
       filtered = filtered.filter(l=>l.category === currentCategory);
@@ -447,47 +531,34 @@
       container.innerHTML = '<div class="no-results"><div style="font-size:40px;margin-bottom:8px">Tiada pautan dijumpai</div></div>';
       return;
     }
+
+    // Featured/pinned links get their own spotlight section — only on the
+    // "Semua" tab with no active search, so they don't duplicate or vanish
+    // confusingly while filtering.
+    const showPinnedSection = currentCategory === 'all' && !searchQuery.trim();
+    const pinned = showPinnedSection ? filtered.filter(l=>l.pinned) : [];
+    const rest = showPinnedSection ? filtered.filter(l=>!l.pinned) : filtered;
+
+    let html = '';
+    if(pinned.length){
+      html += '<div class="featured-link-wrap">';
+      pinned.forEach((link, i)=>{ html += buildLinkCardHtml(link, i*0.08, true); });
+      html += '</div>';
+    }
     
     const grouped = {};
-    filtered.forEach(l=>{
+    rest.forEach(l=>{
       const cat = l.category || 'Lain-lain';
       if(!grouped[cat]) grouped[cat] = [];
       grouped[cat].push(l);
     });
     
-    let html = '';
     Object.keys(grouped).forEach((cat, idx)=>{
       if(currentCategory === 'all' && Object.keys(grouped).length > 1){
         html += '<div class="category-title" style="animation-delay:'+(idx*0.1)+'s">'+cat+'</div>';
       }
       grouped[cat].forEach((link, i)=>{
-        const iconHtml = link.iconUrl 
-          ? '<img src="'+link.iconUrl+'" alt="" onerror="this.parentElement.innerHTML=\''+(link.icon||'')+'\'">'
-          : (link.icon || '');
-        const maintOverlay = link.maintenance ? `
-            <div class="maintenance-badge">🚧 Maintenance</div>
-            <div class="maintenance-overlay">
-              <div class="maintenance-tape t1"><span>⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠</span></div>
-              <div class="maintenance-tape t2"><span>⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠</span></div>
-            </div>` : '';
-        
-        html += `
-          <a class="link-btn${link.maintenance ? ' maintenance' : ''}" href="${link.url}" target="_blank" data-id="${link.id}" data-maintenance="${!!link.maintenance}" style="animation-delay:${(idx*0.1 + i*0.08)+0.2}s">
-            <div class="link-icon">${iconHtml}</div>
-            <div class="link-text">
-              <div class="link-title">${escapeHtml(link.title)}</div>
-              ${link.desc ? '<div class="link-desc">'+escapeHtml(link.desc)+'</div>' : ''}
-            </div>
-            <div class="link-meta">
-              ${link.clicks ? '<span class="click-count">'+link.clicks+'</span>' : ''}
-              <svg class="link-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="5" y1="12" x2="19" y2="12"/>
-                <polyline points="12 5 19 12 12 19"/>
-              </svg>
-            </div>
-            ${maintOverlay}
-          </a>
-        `;
+        html += buildLinkCardHtml(link, (idx*0.1 + i*0.08)+0.2, false);
       });
     });
     
@@ -515,6 +586,7 @@
           }).catch(()=>{});
           pushActivity('click', link.title);
         }
+        if(link) trackLinkClickAchievement(id);
         const rect = this.getBoundingClientRect();
         createConfetti(e.clientX, e.clientY);
         const ripple = document.createElement('div');
@@ -544,6 +616,9 @@
     }
     
     container.innerHTML = html;
+    container.querySelectorAll('.social-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ if(typeof checkAchievements === 'function') checkAchievements('social'); });
+    });
   }
   
   function renderAdminLinkList(){
@@ -558,11 +633,16 @@
     }
     let html = '';
     appData.links.forEach(link=>{
+      const scheduleBadge = (link.scheduleStart || link.scheduleEnd)
+        ? (isLinkScheduleActive(link) ? '<span class="maintenance-chip" style="background:#38bdf8">🗓️ Aktif</span>' : '<span class="maintenance-chip" style="background:#9ca3af">🗓️ Luar jadual</span>')
+        : '';
+      const pinBadge = link.pinned ? '<span class="maintenance-chip" style="background:#ff6fb5;color:#fff">📌 Pinned</span>' : '';
+      const countdownBadge = link.countdown ? '<span class="maintenance-chip" style="background:#ef4444;color:#fff">⏳ Countdown</span>' : '';
       html += `
         <div class="link-list-item${link.maintenance ? ' is-maintenance' : ''}">
           <div class="link-list-icon">${link.iconUrl ? '<img src="'+link.iconUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px" onerror="this.parentElement.innerHTML=\''+(link.icon||'')+'\'">' : (link.icon||'')}</div>
           <div class="link-list-info">
-            <div class="link-list-title">${escapeHtml(link.title)} ${link.maintenance ? '<span class="maintenance-chip">🚧 Maintenance</span>' : ''} ${link.clicks?'<span style="font-size:10px;color:var(--muted);margin-left:6px">'+link.clicks+'</span>':''}</div>
+            <div class="link-list-title">${escapeHtml(link.title)} ${link.maintenance ? '<span class="maintenance-chip">🚧 Maintenance</span>' : ''}${pinBadge}${scheduleBadge}${countdownBadge} ${link.clicks?'<span style="font-size:10px;color:var(--muted);margin-left:6px">'+link.clicks+'</span>':''}</div>
             <div class="link-list-url">${escapeHtml(link.url)}</div>
           </div>
           <div class="link-list-actions">
@@ -744,6 +824,133 @@
     }catch(e){}
   }
 
+  // ──────────────────────────────────────────
+  // 🆕 GAMIFICATION — visitor achievement badges
+  // Tracked entirely client-side (localStorage) since it's about
+  // recognising an individual visitor's own behaviour, not shared data.
+  // ──────────────────────────────────────────
+  const ACHV_DEFS = [
+    { id:'first_visit',   icon:'👋', name:'Pelawat Pertama', desc:'Lawat laman kali pertama' },
+    { id:'explorer',      icon:'🔗', name:'Explorer',        desc:'Klik 3 pautan berbeza' },
+    { id:'power_click',   icon:'🚀', name:'Power Clicker',   desc:'Klik 6 pautan berbeza' },
+    { id:'night_owl',     icon:'🌙', name:'Night Owl',       desc:'Lawat antara 12am - 5am' },
+    { id:'curious',       icon:'🔍', name:'Pencari',         desc:'Guna kotak carian' },
+    { id:'loyal',         icon:'📅', name:'Pelawat Setia',   desc:'Kembali pada hari berbeza' },
+    { id:'socialite',     icon:'💬', name:'Socialite',       desc:'Klik salah satu ikon sosial' },
+    { id:'completionist', icon:'💯', name:'Completionist',   desc:'Klik semua pautan aktif' }
+  ];
+
+  function loadAchvState(){
+    try{
+      const raw = localStorage.getItem('h4sx_achv');
+      if(raw){
+        const parsed = JSON.parse(raw);
+        return Object.assign({ unlocked:{}, clickedLinks:[], visitDates:[], searched:false, viewedAt:0 }, parsed);
+      }
+    }catch(e){}
+    return { unlocked:{}, clickedLinks:[], visitDates:[], searched:false, viewedAt:0 };
+  }
+  function saveAchvState(){
+    try{ localStorage.setItem('h4sx_achv', JSON.stringify(achvState)); }catch(e){}
+  }
+  let achvState = loadAchvState();
+
+  function unlockAchievement(id){
+    if(achvState.unlocked[id]) return;
+    const def = ACHV_DEFS.find(a=>a.id===id);
+    if(!def) return;
+    achvState.unlocked[id] = Date.now();
+    saveAchvState();
+    showToast('🏆 Badge Baru: ' + def.name + '!', 'achievement');
+    try{
+      createConfetti(window.innerWidth/2, window.innerHeight/2.5);
+      setTimeout(()=>createConfetti(window.innerWidth/2, window.innerHeight/2.5), 200);
+    }catch(e){}
+    updateAchvUI();
+  }
+
+  window.checkAchievements = function(context){
+    const now = new Date();
+    const hour = now.getHours();
+    const today = now.toISOString().slice(0,10);
+
+    if(context === 'visit'){
+      unlockAchievement('first_visit');
+      if(hour >= 0 && hour < 5) unlockAchievement('night_owl');
+      if(achvState.visitDates.indexOf(today) === -1){
+        achvState.visitDates.push(today);
+        saveAchvState();
+      }
+      if(achvState.visitDates.length >= 2) unlockAchievement('loyal');
+    }
+    if(context === 'click'){
+      const uniqueCount = achvState.clickedLinks.length;
+      if(uniqueCount >= 3) unlockAchievement('explorer');
+      if(uniqueCount >= 6) unlockAchievement('power_click');
+      const activeLinks = appData.links.filter(l=>!l.maintenance && isLinkScheduleActive(l));
+      if(activeLinks.length > 0 && uniqueCount >= activeLinks.length) unlockAchievement('completionist');
+    }
+    if(context === 'search'){
+      if(!achvState.searched){ achvState.searched = true; saveAchvState(); }
+      unlockAchievement('curious');
+    }
+    if(context === 'social'){
+      unlockAchievement('socialite');
+    }
+    updateAchvUI();
+  };
+
+  function trackLinkClickAchievement(linkId){
+    if(achvState.clickedLinks.indexOf(linkId) === -1){
+      achvState.clickedLinks.push(linkId);
+      saveAchvState();
+    }
+    window.checkAchievements('click');
+  }
+
+  function updateAchvUI(){
+    const total = ACHV_DEFS.length;
+    const earned = Object.keys(achvState.unlocked).length;
+    const pct = total ? Math.round(earned/total*100) : 0;
+
+    const fill = document.getElementById('achvProgressFill');
+    const label = document.getElementById('achvProgressLabel');
+    if(fill) fill.style.width = pct + '%';
+    if(label) label.textContent = earned + ' / ' + total + ' badge diperoleh';
+
+    const sideFill = document.getElementById('sideAchvFill');
+    const sideLabel = document.getElementById('sideAchvLabel');
+    if(sideFill) sideFill.style.width = pct + '%';
+    if(sideLabel) sideLabel.textContent = earned + ' / ' + total + ' badge';
+
+    const dot = document.getElementById('achvBtnDot');
+    if(dot) dot.style.display = (earned > 0 && !achvState.viewedAt) ? 'block' : 'none';
+
+    const grid = document.getElementById('achvGrid');
+    if(grid){
+      grid.innerHTML = ACHV_DEFS.map(def=>{
+        const unlockedAt = achvState.unlocked[def.id];
+        const cls = unlockedAt ? 'unlocked' : 'locked';
+        const dateStr = unlockedAt ? new Date(unlockedAt).toLocaleDateString('ms-MY') : '';
+        return '<div class="achv-badge ' + cls + '">' +
+          '<div class="achv-badge-icon">' + (unlockedAt ? def.icon : '🔒') + '</div>' +
+          '<div class="achv-badge-name">' + def.name + '</div>' +
+          '<div class="achv-badge-desc">' + def.desc + '</div>' +
+          (unlockedAt ? '<div class="achv-badge-date">' + dateStr + '</div>' : '') +
+          '</div>';
+      }).join('');
+    }
+  }
+
+  function openAchvModal(){
+    updateAchvUI();
+    document.getElementById('achvModal').classList.add('active');
+    achvState.viewedAt = Date.now();
+    saveAchvState();
+    const dot = document.getElementById('achvBtnDot');
+    if(dot) dot.style.display = 'none';
+  }
+
   function renderAll(){
     try { applyTheme(); } catch(e) { console.error('applyTheme error:', e); }
     try { renderProfile(); } catch(e) { console.error('renderProfile error:', e); }
@@ -854,6 +1061,10 @@
       document.getElementById('linkIcon').value = '';
       document.getElementById('linkIconUrl').value = '';
       document.getElementById('linkMaintenance').checked = false;
+      document.getElementById('linkPinned').checked = false;
+      document.getElementById('linkScheduleStart').value = '';
+      document.getElementById('linkScheduleEnd').value = '';
+      document.getElementById('linkCountdown').value = '';
     }
   }
   function closeLinkModal(){ document.getElementById('linkModal').classList.remove('active'); }
@@ -869,6 +1080,10 @@
     document.getElementById('linkIcon').value = link.icon || '';
     document.getElementById('linkIconUrl').value = link.iconUrl || '';
     document.getElementById('linkMaintenance').checked = !!link.maintenance;
+    document.getElementById('linkPinned').checked = !!link.pinned;
+    document.getElementById('linkScheduleStart').value = link.scheduleStart || '';
+    document.getElementById('linkScheduleEnd').value = link.scheduleEnd || '';
+    document.getElementById('linkCountdown').value = link.countdown || '';
     openLinkModal(true);
   };
   
@@ -1143,8 +1358,13 @@
     });
     
     let _searchDebounce = null;
+    let _searchAchvFired = false;
     document.getElementById('searchInput').addEventListener('input', (e)=>{
       const val = e.target.value;
+      if(val.trim() && !_searchAchvFired){
+        _searchAchvFired = true;
+        window.checkAchievements('search');
+      }
       clearTimeout(_searchDebounce);
       _searchDebounce = setTimeout(()=>{
         searchQuery = val;
@@ -1163,6 +1383,40 @@
     document.getElementById('copyLink').addEventListener('click', ()=>{
       navigator.clipboard.writeText(window.location.href).then(()=>{ showToast('Pautan disalin!'); shareMenu.classList.remove('active'); });
     });
+
+    // 🆕 QR Code modal
+    document.getElementById('showQrBtn').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      shareMenu.classList.remove('active');
+      document.getElementById('qrModal').classList.add('active');
+      const canvas = document.getElementById('qrCanvas');
+      const qrUrl = window.location.href.split('#')[0];
+      if(window.QRCode && canvas){
+        QRCode.toCanvas(canvas, qrUrl, { width: 240, margin: 2, color: { dark: '#1a0f1e', light: '#ffffff' } }, function(err){
+          if(err) showToast('Gagal jana kod QR', 'error');
+        });
+      }
+    });
+    document.getElementById('closeQrModal').addEventListener('click', ()=>{ document.getElementById('qrModal').classList.remove('active'); });
+    document.getElementById('qrModal').addEventListener('click', (e)=>{ if(e.target.id === 'qrModal') document.getElementById('qrModal').classList.remove('active'); });
+    document.getElementById('qrDownloadBtn').addEventListener('click', ()=>{
+      const canvas = document.getElementById('qrCanvas');
+      if(!canvas) return;
+      const a = document.createElement('a');
+      a.download = 'h4sx-qr.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+      showToast('Kod QR dimuat turun!');
+    });
+    document.getElementById('qrCopyBtn').addEventListener('click', ()=>{
+      navigator.clipboard.writeText(window.location.href).then(()=>showToast('Pautan disalin!'));
+    });
+
+    // 🆕 Achievements modal
+    document.getElementById('achvBtn').addEventListener('click', openAchvModal);
+    document.getElementById('sideAchvWidget').addEventListener('click', openAchvModal);
+    document.getElementById('closeAchvModal').addEventListener('click', ()=>{ document.getElementById('achvModal').classList.remove('active'); });
+    document.getElementById('achvModal').addEventListener('click', (e)=>{ if(e.target.id === 'achvModal') document.getElementById('achvModal').classList.remove('active'); });
     
     document.querySelectorAll('.tab-btn-modal').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -1261,7 +1515,7 @@
       const url = document.getElementById('linkUrl').value.trim();
       if(!title || !url){ showToast('Tajuk dan URL wajib diisi!', 'warning'); return; }
       const editId = document.getElementById('editLinkId').value;
-      const linkData = { title, url, desc: document.getElementById('linkDesc').value.trim(), category: document.getElementById('linkCategory').value.trim() || 'Utama', icon: document.getElementById('linkIcon').value.trim(), iconUrl: document.getElementById('linkIconUrl').value.trim(), maintenance: document.getElementById('linkMaintenance').checked, clicks: 0 };
+      const linkData = { title, url, desc: document.getElementById('linkDesc').value.trim(), category: document.getElementById('linkCategory').value.trim() || 'Utama', icon: document.getElementById('linkIcon').value.trim(), iconUrl: document.getElementById('linkIconUrl').value.trim(), maintenance: document.getElementById('linkMaintenance').checked, pinned: document.getElementById('linkPinned').checked, scheduleStart: document.getElementById('linkScheduleStart').value || null, scheduleEnd: document.getElementById('linkScheduleEnd').value || null, countdown: document.getElementById('linkCountdown').value || null, clicks: 0 };
       const btn = document.getElementById('saveLinkBtn');
       btn.disabled = true; btn.textContent = 'Menyimpan...';
       const doSave = ()=>{
