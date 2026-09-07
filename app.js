@@ -174,7 +174,33 @@
   };
   
   // STATE
-  let appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  const DATA_CACHE_KEY = 'h4sx_data_cache';
+  function loadCachedData(){
+    try{
+      const raw = localStorage.getItem(DATA_CACHE_KEY);
+      if(!raw) return null;
+      const parsed = JSON.parse(raw);
+      // Minimal shape check so a corrupt/old cache never breaks first paint
+      if(parsed && parsed.profile && Array.isArray(parsed.links)){
+        parsed.settings = parsed.settings || DEFAULT_DATA.settings;
+        parsed.music = Array.isArray(parsed.music) ? parsed.music : [];
+        return parsed;
+      }
+    }catch(e){}
+    return null;
+  }
+  function cacheData(data){
+    try{ localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(data)); }catch(e){}
+  }
+  // 🆕 Fast render: if we have a cached copy of the last real data (from
+  // a previous visit), use it as the STARTING state instead of the
+  // generic DEFAULT_DATA — so the very first paint already shows the
+  // real logo/links, not a placeholder that then flashes to the real one.
+  // A fresh Firebase snapshot always arrives shortly after and silently
+  // replaces this (see loadDataFromFirebase), so this is purely cosmetic.
+  const _cachedStartData = loadCachedData();
+  let appData = _cachedStartData || JSON.parse(JSON.stringify(DEFAULT_DATA));
+  let _usingCachedData = !!_cachedStartData;
   let currentCategory = 'all';
   let searchQuery = '';
   let firebaseApp = null;
@@ -202,11 +228,26 @@
     const ov = document.getElementById('loadingOverlay');
     if(ov) ov.style.display = 'none';
   }
+  function showSyncIndicator(){
+    const bar = document.getElementById('syncBar');
+    if(bar){ bar.classList.remove('done'); bar.classList.add('active'); }
+  }
+  function hideSyncIndicator(){
+    const bar = document.getElementById('syncBar');
+    if(!bar) return;
+    bar.classList.remove('active');
+    bar.classList.add('done');
+    setTimeout(()=>{ bar.classList.remove('done'); bar.style.width=''; bar.style.transition=''; }, 650);
+  }
   
   function initFirebase(){
     renderAll();
     setupBackgroundEffects();
     hideLoading();
+    // 🆕 Fast render: we're showing cached data from last visit right now —
+    // flash a thin top bar so it's clear fresh data is still being confirmed
+    // in the background (fades out the moment real data arrives).
+    if(_usingCachedData) showSyncIndicator();
     // 🆕 Gamification: first-visit / night-owl / returning-visitor checks,
     // plus the live countdown ticker for any link with a countdown set.
     window.checkAchievements('visit');
@@ -215,6 +256,7 @@
       console.warn('Firebase belum disetup. Guna data laluan sahaja.');
       const notice = document.getElementById('firebaseNotice');
       if(notice) notice.style.display = 'block';
+      hideSyncIndicator();
       authReadyResolve(null);
       return false;
     }
@@ -234,6 +276,7 @@
     }catch(e){
       console.error('Firebase init error:', e);
       showToast('Gagal sambung ke Firebase: ' + (e.message || e), 'error');
+      hideSyncIndicator();
       authReadyResolve(null);
       return false;
     }
@@ -254,6 +297,11 @@
             ? data.music.map((val, idx)=>({ id: val.id || ('music_' + idx), ...val }))
             : (data.music ? Object.entries(data.music).map(([id, val])=>({ id: val.id || id, ...val })) : [])
         };
+        // 🆕 Fresh data confirmed — cache it for next visit's instant paint,
+        // and fade out the "syncing" bar if it was showing.
+        cacheData(appData);
+        _usingCachedData = false;
+        hideSyncIndicator();
         renderAll();
         // Removed auto-play to comply with browser autoplay policy
         // User must click play button first
@@ -265,9 +313,11 @@
           music:    {}
         };
         ref.set(rtdbData).catch(e=>console.error('Write default error:', e));
+        hideSyncIndicator();
       }
     }, (error)=>{
       console.error('Firebase read error:', error);
+      hideSyncIndicator();
       const errMsg = error.code === 'PERMISSION_DENIED'
         ? 'Akses ditolak — semak Firebase Realtime Database Rules'
         : 'Gagal baca data: ' + (error.message || error.code || error);
@@ -470,6 +520,62 @@
     });
   }
 
+  // ──────────────────────────────────────────
+  // 🆕 LINK REDIRECT TRANSITION
+  // Instead of jumping straight out to the destination, show a short,
+  // cancellable "Membuka X..." screen — feels intentional/premium and
+  // gives misclicks an escape hatch. Click tracking + achievement credit
+  // only fire once the redirect actually completes (not on cancel).
+  // ──────────────────────────────────────────
+  const REDIRECT_DURATION = 1300; // ms
+  let _redirectTimer = null;
+  let _redirectTarget = null;
+
+  function openRedirectOverlay(link){
+    _redirectTarget = link;
+    const overlay = document.getElementById('redirectOverlay');
+    const iconEl = document.getElementById('redirectIcon');
+    const titleEl = document.getElementById('redirectTitle');
+    const ring = document.getElementById('redirectRingFg');
+    if(!overlay || !iconEl || !titleEl || !ring) return;
+
+    iconEl.innerHTML = link.iconUrl
+      ? '<img src="'+link.iconUrl+'" alt="" onerror="this.parentElement.textContent=\''+(link.icon||'🔗')+'\'">'
+      : (link.icon || '🔗');
+    titleEl.textContent = 'Membuka ' + link.title + '...';
+
+    overlay.classList.add('active');
+
+    ring.style.transition = 'none';
+    ring.style.strokeDashoffset = '283';
+    void ring.offsetWidth; // force reflow so the transition below actually animates
+    ring.style.transition = 'stroke-dashoffset ' + REDIRECT_DURATION + 'ms linear';
+    ring.style.strokeDashoffset = '0';
+
+    clearTimeout(_redirectTimer);
+    _redirectTimer = setTimeout(completeRedirect, REDIRECT_DURATION);
+  }
+
+  function completeRedirect(){
+    const link = _redirectTarget;
+    closeRedirectOverlay();
+    if(!link) return;
+    if(isFirebaseReady){
+      firebaseDb.ref('gateway_data/links/' + link.id + '/clicks').transaction((c)=>(c||0)+1).catch(()=>{});
+      pushActivity('click', link.title);
+    }
+    trackLinkClickAchievement(link.id);
+    window.open(link.url, '_blank');
+  }
+
+  function closeRedirectOverlay(){
+    clearTimeout(_redirectTimer);
+    _redirectTimer = null;
+    _redirectTarget = null;
+    const overlay = document.getElementById('redirectOverlay');
+    if(overlay) overlay.classList.remove('active');
+  }
+
   function buildLinkCardHtml(link, delay, isPinned){
     const iconHtml = link.iconUrl 
       ? '<img src="'+link.iconUrl+'" alt="" onerror="this.parentElement.innerHTML=\''+(link.icon||'')+'\'">'
@@ -571,28 +677,23 @@
     
     container.querySelectorAll('.link-btn').forEach(btn=>{
       btn.addEventListener('click', function(e){
+        e.preventDefault();
         const id = this.dataset.id;
         const link = appData.links.find(l=>l.id===id);
-        if(link && link.maintenance){
-          e.preventDefault();
+        if(!link) return;
+        if(link.maintenance){
           showToast('🚧 "'+link.title+'" sedang dalam penyelenggaraan. Sila cuba sebentar lagi.', 'warning');
           return;
         }
-        if(link && isFirebaseReady && !this.dataset.clicked){
-          this.dataset.clicked = 'true';
-          setTimeout(()=>delete this.dataset.clicked, 1000);
-          firebaseDb.ref('gateway_data/links/' + id + '/clicks').transaction((currentClicks)=>{
-            return (currentClicks || 0) + 1;
-          }).catch(()=>{});
-          pushActivity('click', link.title);
-        }
-        if(link) trackLinkClickAchievement(id);
-        const rect = this.getBoundingClientRect();
+        // Tactile feedback right away, then the cancellable "Membuka X..."
+        // transition — actual navigation + click/achievement tracking
+        // happens in completeRedirect() only if it isn't cancelled.
         createConfetti(e.clientX, e.clientY);
         const ripple = document.createElement('div');
         ripple.className = 'click-effect';
         this.appendChild(ripple);
         setTimeout(()=>ripple.remove(), 600);
+        openRedirectOverlay(link);
       });
     });
   }
@@ -1417,6 +1518,15 @@
     document.getElementById('sideAchvWidget').addEventListener('click', openAchvModal);
     document.getElementById('closeAchvModal').addEventListener('click', ()=>{ document.getElementById('achvModal').classList.remove('active'); });
     document.getElementById('achvModal').addEventListener('click', (e)=>{ if(e.target.id === 'achvModal') document.getElementById('achvModal').classList.remove('active'); });
+
+    // 🆕 Link redirect transition — cancel button + click outside to abort
+    document.getElementById('redirectCancelBtn').addEventListener('click', closeRedirectOverlay);
+    document.getElementById('redirectOverlay').addEventListener('click', (e)=>{
+      if(e.target.id === 'redirectOverlay') closeRedirectOverlay();
+    });
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape' && document.getElementById('redirectOverlay').classList.contains('active')) closeRedirectOverlay();
+    });
     
     document.querySelectorAll('.tab-btn-modal').forEach(btn=>{
       btn.addEventListener('click', ()=>{
