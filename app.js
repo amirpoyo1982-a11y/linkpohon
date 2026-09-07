@@ -527,9 +527,17 @@
   // gives misclicks an escape hatch. Click tracking + achievement credit
   // only fire once the redirect actually completes (not on cancel).
   // ──────────────────────────────────────────
-  const REDIRECT_DURATION = 1300; // ms
+  const REDIRECT_DURATION = 5000; // ms — enough time to actually read + decide
   let _redirectTimer = null;
+  let _redirectCountdownTimer = null;
   let _redirectTarget = null;
+
+  function resetRedirectRing(){
+    const ring = document.getElementById('redirectRingFg');
+    if(!ring) return;
+    ring.style.transition = 'none';
+    ring.style.strokeDashoffset = '283';
+  }
 
   function openRedirectOverlay(link){
     _redirectTarget = link;
@@ -537,6 +545,7 @@
     const iconEl = document.getElementById('redirectIcon');
     const titleEl = document.getElementById('redirectTitle');
     const ring = document.getElementById('redirectRingFg');
+    const countdownEl = document.getElementById('redirectCountdown');
     if(!overlay || !iconEl || !titleEl || !ring) return;
 
     iconEl.innerHTML = link.iconUrl
@@ -544,15 +553,37 @@
       : (link.icon || '🔗');
     titleEl.textContent = 'Membuka ' + link.title + '...';
 
+    // Always start from a fully-clean ring — this is what fixes it
+    // staying "full" after Cancel then clicking a link again: the CSS
+    // transition keeps running in the background even while the overlay
+    // is just hidden (opacity/visibility), so we hard-reset it here
+    // every time, before starting a new countdown.
+    clearTimeout(_redirectTimer);
+    clearInterval(_redirectCountdownTimer);
+    resetRedirectRing();
+
     overlay.classList.add('active');
 
-    ring.style.transition = 'none';
-    ring.style.strokeDashoffset = '283';
-    void ring.offsetWidth; // force reflow so the transition below actually animates
-    ring.style.transition = 'stroke-dashoffset ' + REDIRECT_DURATION + 'ms linear';
-    ring.style.strokeDashoffset = '0';
+    const totalSeconds = Math.round(REDIRECT_DURATION / 1000);
+    if(countdownEl) countdownEl.textContent = totalSeconds;
 
-    clearTimeout(_redirectTimer);
+    // Double rAF so the browser actually paints the reset (dashoffset 283)
+    // before we switch the transition back on — a single reflow hack
+    // (offsetWidth) isn't always reliable enough on mobile Safari.
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        ring.style.transition = 'stroke-dashoffset ' + REDIRECT_DURATION + 'ms linear';
+        ring.style.strokeDashoffset = '0';
+      });
+    });
+
+    let remaining = totalSeconds;
+    _redirectCountdownTimer = setInterval(()=>{
+      remaining--;
+      if(countdownEl) countdownEl.textContent = Math.max(remaining, 0);
+      if(remaining <= 0) clearInterval(_redirectCountdownTimer);
+    }, 1000);
+
     _redirectTimer = setTimeout(completeRedirect, REDIRECT_DURATION);
   }
 
@@ -570,10 +601,14 @@
 
   function closeRedirectOverlay(){
     clearTimeout(_redirectTimer);
+    clearInterval(_redirectCountdownTimer);
     _redirectTimer = null;
+    _redirectCountdownTimer = null;
     _redirectTarget = null;
     const overlay = document.getElementById('redirectOverlay');
     if(overlay) overlay.classList.remove('active');
+    // Reset right away too, so the ring is never left "full" for next time
+    resetRedirectRing();
   }
 
   function buildLinkCardHtml(link, delay, isPinned){
@@ -1521,6 +1556,7 @@
 
     // 🆕 Link redirect transition — cancel button + click outside to abort
     document.getElementById('redirectCancelBtn').addEventListener('click', closeRedirectOverlay);
+    document.getElementById('redirectContinueBtn').addEventListener('click', completeRedirect);
     document.getElementById('redirectOverlay').addEventListener('click', (e)=>{
       if(e.target.id === 'redirectOverlay') closeRedirectOverlay();
     });
