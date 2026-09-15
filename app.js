@@ -9,9 +9,7 @@
   const currentDomain = window.location.hostname;
   
   if (!ALLOWED_DOMAINS.includes(currentDomain)) {
-    console.error('Security Alert: Unauthorized domain detected:', currentDomain);
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#1a0a1f;color:#fff;font-family:sans-serif;text-align:center;padding:20px;"><div><h1>🔒 Access Denied</h1><p>This content is protected and can only be accessed from authorized domains.</p></div></div>';
-    throw new Error('Domain not authorized');
+    console.warn('H4SX Gateway is running on an unlisted preview domain:', currentDomain);
   }
   
   // ===== SECURITY: ANTI-COPYING PROTECTIONS =====
@@ -36,42 +34,20 @@
   
   // Disable text selection
   document.addEventListener('selectstart', function(e) {
+    if(e.target.closest('input,textarea,[data-order-id]')) return;
     e.preventDefault();
     return false;
   });
   
   // Disable drag-and-drop
   document.addEventListener('dragstart', function(e) {
+    if(e.target.closest('[data-order-id]')) return;
     e.preventDefault();
     return false;
   });
   
-  // Clear console to hide sensitive info
-  setInterval(function() {
-    console.clear();
-    console.log('%c🔒 H4SX Gateway - Protected Content', 'color: #ff6fb5; font-size: 16px; font-weight: bold;');
-  }, 5000);
-  
-  // ===== SECURITY: ANTI-DEBUGGING MEASURES =====
-  // Detect debugger
-  let _0x1a2b = function() {
-    const _0x3c4d = new Date();
-    debugger;
-    if (new Date() - _0x3c4d > 100) {
-      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#1a0a1f;color:#fff;font-family:sans-serif;text-align:center;padding:20px;"><div><h1>🔒 Debugging Detected</h1><p>Please close your developer tools to continue.</p></div></div>';
-      window.location.reload();
-    }
-  };
-  setInterval(_0x1a2b, 1000);
-  
-  // Detect devtools via window size
-  const _0x5e6f = function() {
-    const _0x7g8h = window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160;
-    if (_0x7g8h) {
-      console.log('%c⚠️ Developer tools detected', 'color: #ff6fb5; font-size: 14px;');
-    }
-  };
-  setInterval(_0x5e6f, 2000);
+  // Browser-side anti-debugging cannot protect source code and can freeze
+  // lower-end devices, so the previous repeating debugger checks were removed.
   
   // ===== SECURITY: SCRIPT INTEGRITY VALIDATION =====
   const _0x9i0j = document.querySelector('script[src*="app.js"]');
@@ -527,17 +503,9 @@
   // gives misclicks an escape hatch. Click tracking + achievement credit
   // only fire once the redirect actually completes (not on cancel).
   // ──────────────────────────────────────────
-  const REDIRECT_DURATION = 5000; // ms — enough time to actually read + decide
+  const REDIRECT_DURATION = 1300; // ms
   let _redirectTimer = null;
-  let _redirectCountdownTimer = null;
   let _redirectTarget = null;
-
-  function resetRedirectRing(){
-    const ring = document.getElementById('redirectRingFg');
-    if(!ring) return;
-    ring.style.transition = 'none';
-    ring.style.strokeDashoffset = '283';
-  }
 
   function openRedirectOverlay(link){
     _redirectTarget = link;
@@ -545,7 +513,6 @@
     const iconEl = document.getElementById('redirectIcon');
     const titleEl = document.getElementById('redirectTitle');
     const ring = document.getElementById('redirectRingFg');
-    const countdownEl = document.getElementById('redirectCountdown');
     if(!overlay || !iconEl || !titleEl || !ring) return;
 
     iconEl.innerHTML = link.iconUrl
@@ -553,37 +520,15 @@
       : (link.icon || '🔗');
     titleEl.textContent = 'Membuka ' + link.title + '...';
 
-    // Always start from a fully-clean ring — this is what fixes it
-    // staying "full" after Cancel then clicking a link again: the CSS
-    // transition keeps running in the background even while the overlay
-    // is just hidden (opacity/visibility), so we hard-reset it here
-    // every time, before starting a new countdown.
-    clearTimeout(_redirectTimer);
-    clearInterval(_redirectCountdownTimer);
-    resetRedirectRing();
-
     overlay.classList.add('active');
 
-    const totalSeconds = Math.round(REDIRECT_DURATION / 1000);
-    if(countdownEl) countdownEl.textContent = totalSeconds;
+    ring.style.transition = 'none';
+    ring.style.strokeDashoffset = '283';
+    void ring.offsetWidth; // force reflow so the transition below actually animates
+    ring.style.transition = 'stroke-dashoffset ' + REDIRECT_DURATION + 'ms linear';
+    ring.style.strokeDashoffset = '0';
 
-    // Double rAF so the browser actually paints the reset (dashoffset 283)
-    // before we switch the transition back on — a single reflow hack
-    // (offsetWidth) isn't always reliable enough on mobile Safari.
-    requestAnimationFrame(()=>{
-      requestAnimationFrame(()=>{
-        ring.style.transition = 'stroke-dashoffset ' + REDIRECT_DURATION + 'ms linear';
-        ring.style.strokeDashoffset = '0';
-      });
-    });
-
-    let remaining = totalSeconds;
-    _redirectCountdownTimer = setInterval(()=>{
-      remaining--;
-      if(countdownEl) countdownEl.textContent = Math.max(remaining, 0);
-      if(remaining <= 0) clearInterval(_redirectCountdownTimer);
-    }, 1000);
-
+    clearTimeout(_redirectTimer);
     _redirectTimer = setTimeout(completeRedirect, REDIRECT_DURATION);
   }
 
@@ -601,14 +546,10 @@
 
   function closeRedirectOverlay(){
     clearTimeout(_redirectTimer);
-    clearInterval(_redirectCountdownTimer);
     _redirectTimer = null;
-    _redirectCountdownTimer = null;
     _redirectTarget = null;
     const overlay = document.getElementById('redirectOverlay');
     if(overlay) overlay.classList.remove('active');
-    // Reset right away too, so the ring is never left "full" for next time
-    resetRedirectRing();
   }
 
   function buildLinkCardHtml(link, delay, isPinned){
@@ -653,7 +594,7 @@
 
   function renderLinks(){
     const container = document.getElementById('linksContainer');
-    let filtered = appData.links.filter(isLinkScheduleActive);
+    let filtered = orderedLinks().filter(isLinkScheduleActive);
     
     if(currentCategory !== 'all'){
       filtered = filtered.filter(l=>l.category === currentCategory);
@@ -1088,6 +1029,7 @@
   }
 
   function renderAll(){
+    try { renderFeatures(); } catch(e) { console.error('Features:', e); }
     try { applyTheme(); } catch(e) { console.error('applyTheme error:', e); }
     try { renderProfile(); } catch(e) { console.error('renderProfile error:', e); }
     try { renderStats(); } catch(e) { console.error('renderStats error:', e); }
@@ -1414,8 +1356,164 @@
     setInterval(refreshFeatured, 3000);
   }
 
+  // Admin-managed features. Stored below settings to preserve the existing schema.
+  function featureConfig(){
+    const s = appData.settings || {};
+    return {
+      banner: {enabled:false,text:'',color:'#ff6fb5',end:'',...s.banner},
+      promo: {enabled:false,title:'',text:'',image:'',label:'Lihat tawaran',url:'',frequency:'session',...s.promo},
+      store: {enabled:false,mode:'auto',open:'09:00',close:'23:30',...s.store},
+      faq: {enabled:false,items:[],...s.faq},
+      effects: {sakura:true,animation:true,glow:true,lite:false,...s.effects}
+    };
+  }
+  function malaysiaDay(now=new Date()){
+    return new Date(now.getTime()+8*3600000).toISOString().slice(0,10);
+  }
+  function storeIsOpen(s, now=new Date()){
+    if(s.mode !== 'auto') return s.mode === 'open';
+    const minutes=t=>Number(t.slice(0,2))*60+Number(t.slice(3));
+    const current=(now.getUTCHours()*60+now.getUTCMinutes()+480)%1440;
+    const start=minutes(s.open),end=minutes(s.close);
+    return start===end || (start<end ? current>=start && current<end : current>=start || current<end);
+  }
+  function featureUrl(value){
+    try { const u=new URL(value); return ['https:','http:'].includes(u.protocol) ? u.href : ''; } catch(e){return '';}
+  }
+  function orderedLinks(){
+    const order=Array.isArray(appData.settings.linkOrder)?appData.settings.linkOrder:[];
+    const ranks=new Map(order.map((id,i)=>[String(id),i]));
+    return [...appData.links].sort((a,b)=>(ranks.get(String(a.id))??order.length)-(ranks.get(String(b.id))??order.length));
+  }
+  let promoShown = new Set(), promoFocus = null, featureFaqKey = '', orderDraft = [];
+  function renderFeatures(){
+    const c=featureConfig(), b=document.getElementById('featureBanner');
+    if(!b) return;
+    b.hidden=!(c.banner.enabled && c.banner.text && (!c.banner.end || Date.now()<Date.parse(c.banner.end)));
+    b.textContent=c.banner.text;
+    b.style.borderColor=normalizeHex(c.banner.color)||'#ff6fb5';
+    b.style.backgroundColor=(normalizeHex(c.banner.color)||'#ff6fb5')+'22';
+    const status=document.getElementById('storeStatus');
+    status.hidden=!c.store.enabled;
+    const open=storeIsOpen(c.store);
+    status.dataset.open=String(open);
+    status.textContent=(open?'Kedai buka':'Kedai tutup')+' · '+(c.store.mode==='auto' ? c.store.open+' – '+c.store.close+' (MYT)' : 'Status ditetapkan admin');
+    const faq=document.getElementById('publicFaq');
+    const items=Array.isArray(c.faq.items)?c.faq.items:[];
+    faq.hidden=!(c.faq.enabled && items.length);
+    const key=JSON.stringify(items);
+    if(featureFaqKey!==key){
+      featureFaqKey=key;
+      faq.innerHTML='<h2>Soalan lazim</h2>'+items.map(x=>'<details><summary>'+escapeHtml(x.question||'')+'</summary><p>'+escapeHtml(x.answer||'')+'</p></details>').join('');
+    }
+    document.body.classList.toggle('effects-no-sakura',!c.effects.sakura || c.effects.lite);
+    document.body.classList.toggle('effects-no-motion',!c.effects.animation || c.effects.lite);
+    document.body.classList.toggle('effects-no-glow',!c.effects.glow || c.effects.lite);
+    document.body.classList.toggle('effects-lite',!!c.effects.lite);
+    const dialog=document.getElementById('promoDialog');
+    const p=c.promo, identity=JSON.stringify(p);
+    if(dialog.open && (dialog.dataset.campaign!==identity || !p.enabled)) dialog.close();
+    if(!p.enabled || !p.title || document.querySelector('.modal-overlay.active') || dialog.open) return;
+    const keyStore='h4sx_promo_'+identity;
+    const seenIdentity=identity+(p.frequency==='daily'?malaysiaDay():'');
+    let seen=promoShown.has(seenIdentity);
+    try { seen=seen || (p.frequency==='daily' ? localStorage.getItem(keyStore)===malaysiaDay() : sessionStorage.getItem(keyStore)==='seen'); } catch(e){}
+    if(seen) return;
+    document.getElementById('promoHeading').textContent=p.title;
+    document.getElementById('promoText').textContent=p.text;
+    const img=document.getElementById('promoImage'), url=featureUrl(p.image);
+    img.hidden=!url; if(url) img.src=url; else img.removeAttribute('src');
+    const link=document.getElementById('promoAction'), target=featureUrl(p.url);
+    link.hidden=!target; if(target)link.href=target; else link.removeAttribute('href');
+    link.textContent=p.label||'Lihat tawaran';
+    promoFocus=document.activeElement;
+    dialog.dataset.campaign=identity; dialog.showModal();
+    promoShown.add(seenIdentity);
+    try { if(p.frequency==='daily')localStorage.setItem(keyStore,malaysiaDay());else sessionStorage.setItem(keyStore,'seen'); } catch(e){}
+  }
+  function initFeatures(){
+    const el=id=>document.getElementById(id), esc=escapeHtml;
+    const field=(id,label,type='text')=>'<label class="feature-field">'+label+'<input class="form-input" id="'+id+'" type="'+type+'"></label>';
+    const toggle=(id,label)=>'<label class="feature-toggle"><input id="'+id+'" type="checkbox"> '+label+'</label>';
+    const select=(id,label,options)=>'<label class="feature-field">'+label+'<select class="form-select" id="'+id+'">'+options.map(([v,t])=>'<option value="'+v+'">'+t+'</option>').join('')+'</select></label>';
+    el('profileCard').insertAdjacentHTML('beforebegin','<div id="featureBanner" class="feature-banner" hidden></div>');
+    el('profileCard').insertAdjacentHTML('afterend','<div id="storeStatus" class="store-status" role="status" hidden></div>');
+    el('socialRow').insertAdjacentHTML('beforebegin','<section id="publicFaq" class="public-faq" hidden></section>');
+    document.body.insertAdjacentHTML('beforeend','<dialog id="promoDialog" class="promo-dialog" aria-labelledby="promoHeading"><button type="button" id="closePromo" class="modal-close" aria-label="Tutup promosi">✕</button><img id="promoImage" alt="Promosi H4SX" hidden><h2 id="promoHeading"></h2><p id="promoText"></p><a id="promoAction" class="btn btn-primary" target="_blank" rel="noopener noreferrer" hidden></a></dialog>');
+    el('closePromo').onclick=()=>el('promoDialog').close();
+    el('promoDialog').addEventListener('click',e=>{if(e.target===el('promoDialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
+    el('promoDialog').addEventListener('close',()=>{if(promoFocus?.isConnected)promoFocus.focus();});
+    el('promoImage').onerror=()=>{el('promoImage').hidden=true;};
+    el('adminModal').querySelector('.tabs').insertAdjacentHTML('beforeend','<button class="tab-btn-modal" data-tab="features">Features</button>');
+    el('tab-settings').insertAdjacentHTML('afterend','<div id="tab-features" class="tab-content" style="display:none"><form id="featuresForm">'+
+      '<fieldset><legend>📣 Pengumuman</legend>'+toggle('bannerEnabled','Aktifkan banner')+field('bannerText','Teks pengumuman')+field('bannerColor','Warna banner','color')+field('bannerEnd','Tamat pada (waktu Malaysia; kosong = tiada tamat)','datetime-local')+'</fieldset>'+
+      '<fieldset><legend>🎁 Popup promosi</legend>'+toggle('promoEnabled','Aktifkan popup')+field('promoTitle','Tajuk')+field('promoBody','Teks promosi')+field('promoImg','URL gambar (pilihan)','url')+field('promoLabel','Teks butang')+field('promoUrl','URL butang (pilihan)','url')+select('promoFrequency','Kekerapan',[['session','Sekali setiap sesi tab'],['daily','Sekali sehari (waktu Malaysia)']])+'</fieldset>'+
+      '<fieldset><legend>🕘 Status kedai</legend>'+toggle('storeEnabled','Papar status kedai')+select('storeMode','Mod',[['auto','Automatik — setiap hari'],['open','Manual: buka'],['closed','Manual: tutup']])+field('storeOpen','Waktu buka (Malaysia)','time')+field('storeClose','Waktu tutup (Malaysia)','time')+'<p class="feature-help">Waktu sama = 24 jam. Jadual merentas tengah malam disokong.</p></fieldset>'+
+      '<fieldset><legend>💬 FAQ</legend>'+toggle('faqEnabled','Papar soalan lazim')+'<div id="faqEditor"></div><button type="button" class="btn btn-secondary" id="addFaq">+ Tambah soalan</button></fieldset>'+
+      '<fieldset><legend>✨ Efek</legend>'+toggle('effectSakura','Kelopak sakura')+toggle('effectAnimation','Animasi')+toggle('effectGlow','Glow')+toggle('effectLite','Mod ringan — matikan animasi, sakura, glow dan blur')+'</fieldset><button type="submit" id="saveFeatures" class="btn btn-primary btn-block">Simpan semua features</button><p id="featureSaveStatus" role="status" class="feature-help"></p></form></div>');
+    el('tab-links').insertAdjacentHTML('afterbegin','<details class="order-editor"><summary>↕ Susun pautan</summary><p class="feature-help">Drag kad atau guna ↑ ↓. Urutan digunakan dalam kategori masing-masing; pautan pinned kekal di atas.</p><div id="orderList"></div><button type="button" id="saveOrder" class="btn btn-primary">Simpan susunan</button></details>');
+    function addFaq(question='',answer=''){
+      const row=document.createElement('div');row.className='faq-edit-row';
+      row.innerHTML='<label class="feature-field">Soalan<input class="form-input faq-question" required maxlength="200" value="'+esc(question)+'"></label><label class="feature-field">Jawapan<textarea class="form-textarea faq-answer" required maxlength="3000">'+esc(answer)+'</textarea></label><button type="button" class="btn btn-danger">Padam soalan</button>';
+      row.querySelector('button').onclick=()=>row.remove();el('faqEditor').appendChild(row);
+    }
+    el('addFaq').onclick=()=>addFaq();
+    function loadForm(){
+      const c=featureConfig();
+      const checks={bannerEnabled:c.banner.enabled,promoEnabled:c.promo.enabled,storeEnabled:c.store.enabled,faqEnabled:c.faq.enabled,effectSakura:c.effects.sakura,effectAnimation:c.effects.animation,effectGlow:c.effects.glow,effectLite:c.effects.lite};
+      for(const [id,v] of Object.entries(checks))el(id).checked=!!v;
+      let end='';if(c.banner.end && Number.isFinite(Date.parse(c.banner.end)))end=new Date(Date.parse(c.banner.end)+8*3600000).toISOString().slice(0,16);
+      const values={bannerText:c.banner.text,bannerColor:c.banner.color,bannerEnd:end,promoTitle:c.promo.title,promoBody:c.promo.text,promoImg:c.promo.image,promoLabel:c.promo.label,promoUrl:c.promo.url,promoFrequency:c.promo.frequency,storeMode:c.store.mode,storeOpen:c.store.open,storeClose:c.store.close};
+      for(const [id,v] of Object.entries(values))el(id).value=v||'';
+      el('faqEditor').replaceChildren();(Array.isArray(c.faq.items)?c.faq.items:[]).forEach(x=>addFaq(x.question,x.answer));
+      el('featureSaveStatus').textContent='';orderDraft=orderedLinks().map(l=>String(l.id));renderOrder();
+    }
+    new MutationObserver(()=>{if(el('adminModal').classList.contains('active'))loadForm();}).observe(el('adminModal'),{attributes:true,attributeFilter:['class']});
+    el('featuresForm').onsubmit=async e=>{
+      e.preventDefault();if(!currentUser){showToast('Sila login admin!','warning');return;}
+      const value=id=>el(id).value.trim(),checked=id=>el(id).checked;
+      for(const id of ['promoImg','promoUrl'])if(value(id)&&!featureUrl(value(id))){showToast('URL mesti bermula dengan https:// atau http://','error');el(id).focus();return;}
+      if(checked('bannerEnabled')&&!value('bannerText') || checked('promoEnabled')&&!value('promoTitle')){showToast('Isi teks banner / tajuk promosi sebelum aktifkan.','warning');return;}
+      if(!value('storeOpen')||!value('storeClose')){showToast('Isi kedua-dua waktu kedai.','warning');return;}
+      const data={
+        banner:{enabled:checked('bannerEnabled'),text:value('bannerText'),color:value('bannerColor'),end:value('bannerEnd')?new Date(value('bannerEnd')+':00+08:00').toISOString():''},
+        promo:{enabled:checked('promoEnabled'),title:value('promoTitle'),text:value('promoBody'),image:value('promoImg'),label:value('promoLabel'),url:value('promoUrl'),frequency:value('promoFrequency')},
+        store:{enabled:checked('storeEnabled'),mode:value('storeMode'),open:value('storeOpen'),close:value('storeClose')},
+        faq:{enabled:checked('faqEnabled'),items:[...el('faqEditor').children].map(row=>({question:row.querySelector('.faq-question').value.trim(),answer:row.querySelector('.faq-answer').value.trim()}))},
+        effects:{sakura:checked('effectSakura'),animation:checked('effectAnimation'),glow:checked('effectGlow'),lite:checked('effectLite')}
+      };
+      el('saveFeatures').disabled=true;el('featureSaveStatus').textContent='Menyimpan…';
+      try{
+        await authReady;if(!currentUser||!isFirebaseReady)throw new Error('Sila login dan pastikan sambungan tersedia.');
+        await firebaseDb.ref('gateway_data/settings').update(data);
+        Object.assign(appData.settings,data);cacheData(appData);renderFeatures();el('featureSaveStatus').textContent='Semua features berjaya disimpan.';
+      }catch(err){el('featureSaveStatus').textContent='Gagal simpan. Input dikekalkan; cuba semula. '+(err.message||'');}
+      finally{el('saveFeatures').disabled=false;}
+    };
+    let dragged=null;
+    function move(id,target){const from=orderDraft.indexOf(id),to=orderDraft.indexOf(target);if(from<0||to<0)return;orderDraft.splice(to,0,orderDraft.splice(from,1)[0]);renderOrder();}
+    function renderOrder(){
+      el('orderList').replaceChildren();
+      orderDraft.forEach((id,i)=>{
+        const link=appData.links.find(x=>String(x.id)===id);if(!link)return;
+        const row=document.createElement('div');row.className='order-row';row.draggable=true;row.dataset.orderId=id;
+        row.innerHTML='<span>⠿ '+esc(link.title)+'</span><button type="button" class="btn btn-secondary" aria-label="Naik" '+(i===0?'disabled':'')+'>↑</button><button type="button" class="btn btn-secondary" aria-label="Turun" '+(i===orderDraft.length-1?'disabled':'')+'>↓</button>';
+        row.querySelectorAll('button')[0].onclick=()=>move(id,orderDraft[i-1]);row.querySelectorAll('button')[1].onclick=()=>move(id,orderDraft[i+1]);
+        row.ondragstart=e=>{dragged=id;e.dataTransfer.setData('text/plain',id);e.dataTransfer.effectAllowed='move';row.classList.add('dragging');};
+        row.ondragend=()=>{dragged=null;row.classList.remove('dragging');};row.ondragover=e=>e.preventDefault();row.ondrop=e=>{e.preventDefault();if(dragged)move(dragged,id);};
+        el('orderList').appendChild(row);
+      });
+    }
+    el('saveOrder').onclick=async()=>{
+      const btn=el('saveOrder');btn.disabled=true;
+      try{await saveToFirebase('settings/linkOrder',orderDraft);appData.settings.linkOrder=[...orderDraft];cacheData(appData);renderLinks();}catch(e){showToast('Susunan belum disimpan. Cuba semula.','error');}finally{btn.disabled=false;}
+    };
+    setInterval(()=>{if(!document.hidden)renderFeatures();},15000);
+  }
+
   // INIT - Execute immediately (not DOMContentLoaded)
   (function init(){
+    initFeatures();
     initFirebase();
     initSideWidgets();
     
@@ -1556,7 +1654,6 @@
 
     // 🆕 Link redirect transition — cancel button + click outside to abort
     document.getElementById('redirectCancelBtn').addEventListener('click', closeRedirectOverlay);
-    document.getElementById('redirectContinueBtn').addEventListener('click', completeRedirect);
     document.getElementById('redirectOverlay').addEventListener('click', (e)=>{
       if(e.target.id === 'redirectOverlay') closeRedirectOverlay();
     });
@@ -1748,6 +1845,7 @@
         youtube: document.getElementById('socialYT').value.trim() || '#'
       };
       const newSettings = {
+        ...appData.settings,
         theme: appData.settings.theme || 'dark',
         accentColor: accentC,
         gradientA: gradA,

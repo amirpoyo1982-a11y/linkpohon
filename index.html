@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="ms" style="margin:0;padding:0;">
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>H4SX Gateway | Official Links</title>
+<meta name="theme-color" content="#080612">
+<meta name="description" content="Semua pautan rasmi H4SX Store, generator sensitiviti Free Fire dan sokongan pelanggan dalam satu tempat.">
+<title>H4SX Gateway — Official Links</title>
 <link rel="icon" type="image/png" href="https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<link rel="stylesheet" href="style.css?v=secured-1">
+<link rel="stylesheet" href="style.css?v=secured-1-features-2">
+</head>
 <body data-theme="dark">
 
 <div class="sync-bar" id="syncBar"></div>
@@ -82,11 +86,8 @@
       </svg>
     </div>
     <div class="redirect-title" id="redirectTitle">Membuka pautan...</div>
-    <div class="redirect-sub">Automatik buka dalam <span id="redirectCountdown">5</span> saat...</div>
-    <div class="redirect-actions">
-      <button class="btn btn-primary redirect-continue" id="redirectContinueBtn">🚀 Teruskan Sekarang</button>
-      <button class="btn btn-secondary redirect-cancel" id="redirectCancelBtn">✕ Batal</button>
-    </div>
+    <div class="redirect-sub">Anda akan dibawa keluar dari laman ini</div>
+    <button class="btn btn-secondary redirect-cancel" id="redirectCancelBtn">✕ Batal</button>
   </div>
 </div>
 <!-- Loading -->
@@ -115,6 +116,10 @@
   
   <!-- Top Bar -->
   <div class="top-bar">
+    <div class="top-brand" aria-label="H4SX Gateway">
+      <span class="top-brand-mark">H4</span>
+      <span class="top-brand-copy"><strong>H4SX</strong><small>GATEWAY / OFFICIAL</small></span>
+    </div>
     <button class="icon-btn" id="globalMusicBtn" title="Main Muzik">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="globalMusicIcon">
         <polygon points="5 3 19 12 5 21 5 3"/>
@@ -197,23 +202,26 @@
       </div>
       <div class="online-dot"></div>
     </div>
-    <div class="name" id="profileName">
-      H4SX Gateway
-      <span class="verified-badge">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" fill="#ff6fb5"/>
-          <path d="M8.5 12.5l2.5 2.5 5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </span>
-    </div>
-    <div class="handle" id="profileHandle">@h4sx.official</div>
-    <div class="bio" id="profileBio">Free Fire Sensitivity Generator | Pro Player Presets | Official website | Support whatsapp</div>
-    <div class="location-badge" id="profileLocation">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      <span id="profileLocationText">Kedah, Malaysia</span>
-    </div>
-    <div style="margin-top:12px">
-      <span class="sync-indicator"><span class="sync-dot"></span> Realtime Firebase</span>
+    <div class="profile-copy">
+      <div class="eyebrow"><span></span> OFFICIAL H4SX NETWORK</div>
+      <div class="name" id="profileName">
+        H4SX Gateway
+        <span class="verified-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#ff6fb5"/>
+            <path d="M8.5 12.5l2.5 2.5 5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </div>
+      <div class="handle" id="profileHandle">@h4sx.official</div>
+      <div class="bio" id="profileBio">Free Fire Sensitivity Generator | Pro Player Presets | Official website | Support whatsapp</div>
+      <div class="profile-badges">
+        <div class="location-badge" id="profileLocation">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span id="profileLocationText">Kedah, Malaysia</span>
+        </div>
+        <span class="sync-indicator"><span class="sync-dot"></span> Live &amp; Updated</span>
+      </div>
     </div>
     <div class="stats-row">
       <div class="stat-item">
@@ -232,7 +240,7 @@
   </div>
   
   <!-- Logo Banner -->
-  <div style="text-align:center;margin:20px auto;max-width:440px">
+  <div class="logo-banner-wrap" aria-hidden="true">
     <img id="logoBannerImg" src="https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png" alt="H4SX Logo" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);box-shadow:0 4px 25px rgba(255,111,181,0.5)">
   </div>
   
@@ -644,7 +652,7 @@
 
 </div>
 
-<script src="app.js?v=secured-1"></script>
+<script src="app.js?v=secured-1-features-2"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a"}' crossorigin="anonymous"></script>
 </body>
 </html>
