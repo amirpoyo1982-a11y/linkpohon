@@ -134,6 +134,8 @@
       gradientA: '#ff6fb5',
       gradientB: '#ba55d3',
       theme: 'dark',
+      backgroundUrl: '',
+      backgroundDim: 45,
       socials: {
         whatsapp: '#',
         instagram: '#',
@@ -158,7 +160,7 @@
       const parsed = JSON.parse(raw);
       // Minimal shape check so a corrupt/old cache never breaks first paint
       if(parsed && parsed.profile && Array.isArray(parsed.links)){
-        parsed.settings = parsed.settings || DEFAULT_DATA.settings;
+        parsed.settings = mergeSettings(parsed.settings);
         parsed.music = Array.isArray(parsed.music) ? parsed.music : [];
         return parsed;
       }
@@ -201,14 +203,14 @@
   
   // Init Firebase
   function hideLoading(){
-    const ov = document.getElementById('loadingOverlay');
-    if(ov) ov.style.display = 'none';
+    window.dispatchEvent(new Event('h4sx:data-ready'));
   }
   function showSyncIndicator(){
     const bar = document.getElementById('syncBar');
     if(bar){ bar.classList.remove('done'); bar.classList.add('active'); }
   }
   function hideSyncIndicator(){
+    hideLoading();
     const bar = document.getElementById('syncBar');
     if(!bar) return;
     bar.classList.remove('active');
@@ -219,7 +221,6 @@
   function initFirebase(){
     renderAll();
     setupBackgroundEffects();
-    hideLoading();
     // 🆕 Fast render: we're showing cached data from last visit right now —
     // flash a thin top bar so it's clear fresh data is still being confirmed
     // in the background (fades out the moment real data arrives).
@@ -265,13 +266,9 @@
       if(data){
         appData = {
           profile:  data.profile  || DEFAULT_DATA.profile,
-          settings: data.settings || DEFAULT_DATA.settings,
-          links: Array.isArray(data.links)
-            ? data.links.map((val, idx)=>({ id: val.id || ('link_' + idx), ...val }))
-            : (data.links ? Object.entries(data.links).map(([id, val])=>({ id: val.id || id, ...val })) : []),
-          music: Array.isArray(data.music)
-            ? data.music.map((val, idx)=>({ id: val.id || ('music_' + idx), ...val }))
-            : (data.music ? Object.entries(data.music).map(([id, val])=>({ id: val.id || id, ...val })) : [])
+          settings: mergeSettings(data.settings),
+          links: normalizeCollection(data.links),
+          music: normalizeCollection(data.music)
         };
         // 🆕 Fresh data confirmed — cache it for next visit's instant paint,
         // and fade out the "syncing" bar if it was showing.
@@ -355,9 +352,7 @@
     if(bar){ bar.style.setProperty('--tp-a', a); bar.style.setProperty('--tp-b', b); }
   }
   function populateThemePicker(){
-    const gradA = appData.settings.gradientA || '#ff6fb5';
-    const gradB = appData.settings.gradientB || '#ba55d3';
-    const accentC = appData.settings.accentColor || '#ff6fb5';
+    const {gradA,gradB,accentC} = displayPalette();
     document.getElementById('pickGradA').value = gradA;
     document.getElementById('hexGradA').value = gradA.toUpperCase();
     document.getElementById('pickGradB').value = gradB;
@@ -369,17 +364,86 @@
       btn.classList.toggle('active', btn.dataset.a.toLowerCase()===gradA.toLowerCase() && btn.dataset.b.toLowerCase()===gradB.toLowerCase());
     });
   }
+  function displayPalette(){
+    const s=appData.settings;
+    return {gradA:s.gradientA||'#ff6fb5',gradB:s.gradientB||'#ba55d3',accentC:s.accentColor||'#ff6fb5'};
+  }
+  function mergeSettings(settings){
+    return {...DEFAULT_DATA.settings, ...settings,
+      socials: {...DEFAULT_DATA.settings.socials, ...(settings && settings.socials)}};
+  }
+  function normalizeCollection(value){
+    return Object.entries(value || {}).filter(([, item])=>item && typeof item === 'object')
+      .map(([id, item])=>({...item, id}));
+  }
+  function backgroundUrl(value){
+    if(!value || !String(value).trim()) return '';
+    try{
+      const url = new URL(String(value).trim());
+      return url.protocol === 'https:' && !url.username && !url.password ? url.href : null;
+    }catch(e){ return null; }
+  }
+  function backgroundDim(value){
+    const n = Number(value ?? 45);
+    return Number.isFinite(n) ? Math.min(85, Math.max(0, n)) : 45;
+  }
+  function cssImage(url){ return 'url(' + JSON.stringify(url) + ')'; }
+  let backgroundRequest = 0;
+  let appliedBackground;
+  function applyBackground(){
+    const url = backgroundUrl(appData.settings.backgroundUrl) || '';
+    document.documentElement.style.setProperty('--background-dim', backgroundDim(appData.settings.backgroundDim)/100);
+    if(url === appliedBackground) return;
+    appliedBackground = url;
+    const request = ++backgroundRequest;
+    const layer = document.querySelector('.bg-img');
+    document.body.classList.remove('has-custom-background');
+    layer.style.backgroundImage = 'none';
+    if(!url) return;
+    const img = new Image();
+    img.onload = ()=>{
+      if(request !== backgroundRequest) return;
+      layer.style.backgroundImage = cssImage(url);
+      document.body.classList.add('has-custom-background');
+    };
+    img.onerror = ()=>{ if(request === backgroundRequest) appliedBackground = undefined; };
+    img.src = url;
+  }
+  let previewRequest = 0;
+  function previewBackground(){
+    const request = ++previewRequest;
+    const raw = document.getElementById('backgroundUrl').value;
+    const url = backgroundUrl(raw);
+    const preview = document.getElementById('backgroundPreview');
+    const status = document.getElementById('backgroundStatus');
+    const dim = backgroundDim(document.getElementById('backgroundDim').value);
+    document.getElementById('backgroundDimValue').textContent = dim + '%';
+    preview.style.setProperty('--background-dim', dim/100);
+    preview.style.backgroundImage = 'none';
+    status.textContent = url === null ? 'Masukkan URL HTTPS yang sah.' : !url ? 'Background asal digunakan.' : 'Memuatkan pratonton…';
+    if(!url) return;
+    const img = new Image();
+    img.onload = ()=>{
+      if(request !== previewRequest) return;
+      preview.style.backgroundImage = cssImage(url);
+      status.textContent = 'Gambar berjaya dimuatkan. Tekan Simpan Tetapan untuk guna.';
+    };
+    img.onerror = ()=>{
+      if(request === previewRequest) status.textContent = 'Gambar gagal dimuatkan. Gunakan link terus ke gambar yang boleh diakses umum.';
+    };
+    img.src = url;
+  }
   function applyTheme(){
+    applyBackground();
     document.body.setAttribute('data-theme', appData.settings.theme);
-    document.documentElement.style.setProperty('--accent', appData.settings.accentColor);
-    const hex = appData.settings.accentColor;
+    const {gradA,gradB,accentC}=displayPalette();
+    document.documentElement.style.setProperty('--accent', accentC);
+    const hex = accentC;
     const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
     document.documentElement.style.setProperty('--accent-soft', `rgba(${r},${g},${b},0.2)`);
     // Custom background gradient — this is what actually paints the
     // page background, so it's what makes the theme feel fully custom
     // instead of only the accent color changing.
-    const gradA = appData.settings.gradientA || appData.settings.accentColor || '#ff6fb5';
-    const gradB = appData.settings.gradientB || '#ba55d3';
     document.documentElement.style.setProperty('--grad-a-rgb', hexToRgbStr(gradA));
     document.documentElement.style.setProperty('--grad-b-rgb', hexToRgbStr(gradB));
   }
@@ -395,6 +459,9 @@
     const logoBannerImg = document.getElementById('logoBannerImg');
     // Prioritize Firebase avatar, fallback to default if not set
     const avatarUrl = appData.profile.avatar || 'https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png';
+    avatarImg.onload = ()=>{ avatarImg.style.display = ''; };
+    const introLogo = document.getElementById('introLogo');
+    if(introLogo && introLogo.getAttribute('src') !== avatarUrl) introLogo.src = avatarUrl;
     avatarImg.src = avatarUrl;
     logoBannerImg.src = avatarUrl;
     document.title = (appData.profile.name || 'H4SX Gateway') + ' | Official Links';
@@ -411,19 +478,7 @@
     if(window._typingTimeout)  { clearTimeout(window._typingTimeout);  window._typingTimeout  = null; }
     const bioEl  = document.getElementById('profileBio');
     const bioText = appData.profile.bio || '';
-    window._typingTimeout = setTimeout(()=>{
-      let i = 0;
-      bioEl.innerHTML = '<span class="typing-cursor"></span>';
-      window._typingInterval = setInterval(()=>{
-        if(i < bioText.length){
-          bioEl.innerHTML = escapeHtml(bioText.substring(0, ++i)) + '<span class="typing-cursor"></span>';
-        }else{
-          clearInterval(window._typingInterval);
-          window._typingInterval = null;
-          bioEl.textContent = bioText;
-        }
-      }, 40);
-    }, 300);
+    bioEl.textContent = bioText;
   }
   
   function renderStats(){
@@ -503,45 +558,83 @@
   // gives misclicks an escape hatch. Click tracking + achievement credit
   // only fire once the redirect actually completes (not on cancel).
   // ──────────────────────────────────────────
-  const REDIRECT_DURATION = 1300; // ms
+  const REDIRECT_DURATION = 1100;
   let _redirectTimer = null;
   let _redirectTarget = null;
+  let _redirectFocus = null;
 
   function openRedirectOverlay(link){
-    _redirectTarget = link;
+    let url;
+    try{
+      url = new URL(link.url);
+      if(!['https:', 'http:'].includes(url.protocol)) throw Error('Invalid protocol');
+    }catch(e){ showToast('Pautan tidak sah. Sila hubungi admin.', 'warning'); return; }
+    closeRedirectOverlay();
+    _redirectTarget = {...link, url: url.href};
+    _redirectFocus = document.activeElement;
     const overlay = document.getElementById('redirectOverlay');
-    const iconEl = document.getElementById('redirectIcon');
-    const titleEl = document.getElementById('redirectTitle');
-    const ring = document.getElementById('redirectRingFg');
-    if(!overlay || !iconEl || !titleEl || !ring) return;
-
-    iconEl.innerHTML = link.iconUrl
-      ? '<img src="'+link.iconUrl+'" alt="" onerror="this.parentElement.textContent=\''+(link.icon||'🔗')+'\'">'
-      : (link.icon || '🔗');
-    titleEl.textContent = 'Membuka ' + link.title + '...';
-
+    const icon = document.getElementById('redirectIcon');
+    icon.textContent = link.icon || '↗';
+    if(link.iconUrl){
+      const img = document.createElement('img');
+      img.alt = '';
+      img.onerror = ()=>{ icon.textContent = link.icon || '↗'; };
+      img.src = link.iconUrl;
+      icon.replaceChildren(img);
+    }
+    document.getElementById('redirectTitle').textContent = link.title || 'Pautan pilihan';
+    document.getElementById('redirectDomain').textContent = url.hostname;
+    document.getElementById('redirectStatus').textContent = 'Menyediakan destinasi';
+    document.getElementById('redirectSub').textContent = 'Pautan anda akan dibuka dalam tab baharu.';
+    const go = document.getElementById('redirectContinue');
+    go.href = url.href;
+    go.onclick = ()=>{
+      const target = _redirectTarget;
+      closeRedirectOverlay();
+      if(target) recordRedirectClick(target);
+    };
+    overlay.classList.remove('redirect-ready');
+    overlay.style.setProperty('--redirect-duration', REDIRECT_DURATION + 'ms');
     overlay.classList.add('active');
-
-    ring.style.transition = 'none';
-    ring.style.strokeDashoffset = '283';
-    void ring.offsetWidth; // force reflow so the transition below actually animates
-    ring.style.transition = 'stroke-dashoffset ' + REDIRECT_DURATION + 'ms linear';
-    ring.style.strokeDashoffset = '0';
-
-    clearTimeout(_redirectTimer);
+    overlay.setAttribute('aria-hidden', 'false');
+    document.getElementById('redirectCancelBtn').focus();
     _redirectTimer = setTimeout(completeRedirect, REDIRECT_DURATION);
+  }
+
+  function recordRedirectClick(link){
+    // Analytics must never prevent the destination from opening.
+    try{
+      if(isFirebaseReady){
+        firebaseDb.ref('gateway_data/links/' + link.id + '/clicks')
+          .transaction(c=>(Number(c)||0)+1).catch(()=>{});
+        pushActivity('click', link.title);
+      }
+    }catch(e){ console.warn('Click tracking unavailable', e); }
+    try{ trackLinkClickAchievement(link.id); }catch(e){ console.warn('Achievement tracking unavailable', e); }
   }
 
   function completeRedirect(){
     const link = _redirectTarget;
-    closeRedirectOverlay();
+    clearTimeout(_redirectTimer);
+    _redirectTimer = null;
     if(!link) return;
-    if(isFirebaseReady){
-      firebaseDb.ref('gateway_data/links/' + link.id + '/clicks').transaction((c)=>(c||0)+1).catch(()=>{});
-      pushActivity('click', link.title);
-    }
-    trackLinkClickAchievement(link.id);
-    window.open(link.url, '_blank');
+    let tab = null;
+    try{
+      tab = window.open('about:blank', '_blank');
+      if(tab){
+        tab.opener = null;
+        tab.location.replace(link.url);
+        closeRedirectOverlay();
+        recordRedirectClick(link);
+        return;
+      }
+    }catch(e){ try{ if(tab) tab.close(); }catch(ignore){} }
+    // A real anchor click retains user activation when popups are blocked.
+    const overlay = document.getElementById('redirectOverlay');
+    overlay.classList.add('redirect-ready');
+    document.getElementById('redirectStatus').textContent = 'Destinasi sedia';
+    document.getElementById('redirectSub').textContent = 'Tekan Buka sekarang untuk teruskan ke pautan anda.';
+    document.getElementById('redirectContinue').focus();
   }
 
   function closeRedirectOverlay(){
@@ -549,18 +642,54 @@
     _redirectTimer = null;
     _redirectTarget = null;
     const overlay = document.getElementById('redirectOverlay');
-    if(overlay) overlay.classList.remove('active');
+    if(overlay){
+      overlay.classList.remove('active', 'redirect-ready');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+    if(_redirectFocus && _redirectFocus.isConnected) _redirectFocus.focus();
+    _redirectFocus = null;
   }
 
+  document.getElementById('redirectOverlay').addEventListener('keydown', e=>{
+    if(e.key !== 'Tab') return;
+    const first = document.getElementById('redirectContinue');
+    const last = document.getElementById('redirectCancelBtn');
+    if(e.shiftKey && document.activeElement === first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey && document.activeElement === last){e.preventDefault();first.focus();}
+  });
+
+  let badgeGradientSerial = 0;
+  function linkBadgeHtml(link){
+    if(link.verified !== true) return '';
+    const rainbow = link.verifiedStyle === 'rainbow';
+    const color = typeof link.verifiedColor === 'string' && /^#[0-9a-f]{6}$/i.test(link.verifiedColor) ? link.verifiedColor : '#38BDF8';
+    const values = [1,3,5].map(i=>{
+      const c = parseInt(color.slice(i,i+2),16)/255;
+      return c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055,2.4);
+    });
+    const luminance = .2126*values[0]+.7152*values[1]+.0722*values[2];
+    const ink = rainbow ? '#FFFFFF' : luminance > .179 ? '#000000' : '#FFFFFF';
+    const gradientId = rainbow ? 'badge-rainbow-' + (++badgeGradientSerial) : '';
+    const gradient = rainbow ? '<defs><linearGradient id="'+gradientId+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff477e"/><stop offset="18%" stop-color="#ffaf45"/><stop offset="36%" stop-color="#ffe969"/><stop offset="55%" stop-color="#3ce4ad"/><stop offset="73%" stop-color="#4fa8ff"/><stop offset="90%" stop-color="#b47bff"/><stop offset="100%" stop-color="#ff477e"/></linearGradient></defs>' : '';
+    const fill = rainbow ? ' style="fill:url(#'+gradientId+')"' : '';
+    return '<span class="link-verified'+(rainbow?' link-verified-rainbow':'')+'" role="img" aria-label="Centang pilihan admin" title="Centang pilihan admin" style="--badge-color:'+color+';--badge-ink:'+ink+'"><svg viewBox="0 0 24 24" aria-hidden="true">'+gradient+'<path class="link-verified-seal"'+fill+' d="M12 1.5 15 3l3.3.2 1.5 3 2.4 2.3-.7 3.3.7 3.3-2.4 2.3-1.5 3-3.3.2-3 1.5-3-1.5-3.3-.2-1.5-3-2.4-2.3.7-3.3-.7-3.3 2.4-2.3 1.5-3L9 3Z"/><path class="link-verified-check" d="m7.8 12 2.7 2.7 5.7-5.7"/></svg></span>';
+  }
+  function updateLinkBadgePreview(){
+    const enabled = document.getElementById('linkVerified').checked;
+    const style = document.getElementById('linkVerifiedStyle').value;
+    document.getElementById('linkVerifiedStyle').disabled = !enabled;
+    document.getElementById('linkVerifiedColor').disabled = !enabled || style === 'rainbow';
+    document.getElementById('linkBadgePreview').innerHTML = linkBadgeHtml({verified:enabled,verifiedStyle:style,verifiedColor:document.getElementById('linkVerifiedColor').value});
+    document.getElementById('linkBadgePreviewTitle').textContent = document.getElementById('linkTitle').value.trim() || 'Website H4SX Market';
+    document.getElementById('linkBadgeColorValue').textContent = style === 'rainbow' ? 'Rainbow bergerak' : document.getElementById('linkVerifiedColor').value.toUpperCase();
+  }
   function buildLinkCardHtml(link, delay, isPinned){
     const iconHtml = link.iconUrl 
       ? '<img src="'+link.iconUrl+'" alt="" onerror="this.parentElement.innerHTML=\''+(link.icon||'')+'\'">'
-      : (link.icon || '');
+      : escapeHtml(link.icon || '↗');
     const maintOverlay = link.maintenance ? `
-        <div class="maintenance-badge">🚧 Maintenance</div>
         <div class="maintenance-overlay">
-          <div class="maintenance-tape t1"><span>⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠</span></div>
-          <div class="maintenance-tape t2"><span>⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠ MAINTENANCE ⚠</span></div>
+          <div class="maintenance-tape"><span class="maintenance-status-dot" aria-hidden="true"></span><span>DALAM PENYELENGGARAAN</span><span class="maintenance-return">Kembali nanti ↗</span></div>
         </div>` : '';
 
     let countdownHtml = '';
@@ -576,7 +705,7 @@
       <a class="link-btn${link.maintenance ? ' maintenance' : ''}${isPinned ? ' pinned' : ''}" href="${link.url}" target="_blank" data-id="${link.id}" data-maintenance="${!!link.maintenance}" style="animation-delay:${delay}s">
         <div class="link-icon">${iconHtml}</div>
         <div class="link-text">
-          <div class="link-title">${escapeHtml(link.title)}</div>
+          <div class="link-title">${escapeHtml(link.title)}${linkBadgeHtml(link)}</div>
           ${link.desc ? '<div class="link-desc">'+escapeHtml(link.desc)+'</div>' : ''}
           ${countdownHtml}
         </div>
@@ -628,7 +757,7 @@
       html += '</div>';
     }
     
-    const grouped = {};
+    const grouped = Object.create(null);
     rest.forEach(l=>{
       const cat = l.category || 'Lain-lain';
       if(!grouped[cat]) grouped[cat] = [];
@@ -636,12 +765,15 @@
     });
     
     Object.keys(grouped).forEach((cat, idx)=>{
+      html += '<section class="link-group">';
       if(currentCategory === 'all' && Object.keys(grouped).length > 1){
-        html += '<div class="category-title" style="animation-delay:'+(idx*0.1)+'s">'+cat+'</div>';
+        html += '<h3 class="category-title">'+escapeHtml(cat)+'</h3>';
       }
+      html += '<div class="link-grid">';
       grouped[cat].forEach((link, i)=>{
         html += buildLinkCardHtml(link, (idx*0.1 + i*0.08)+0.2, false);
       });
+      html += '</div></section>';
     });
     
     container.innerHTML = html;
@@ -719,7 +851,7 @@
         <div class="link-list-item${link.maintenance ? ' is-maintenance' : ''}">
           <div class="link-list-icon">${link.iconUrl ? '<img src="'+link.iconUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:8px" onerror="this.parentElement.innerHTML=\''+(link.icon||'')+'\'">' : (link.icon||'')}</div>
           <div class="link-list-info">
-            <div class="link-list-title">${escapeHtml(link.title)} ${link.maintenance ? '<span class="maintenance-chip">🚧 Maintenance</span>' : ''}${pinBadge}${scheduleBadge}${countdownBadge} ${link.clicks?'<span style="font-size:10px;color:var(--muted);margin-left:6px">'+link.clicks+'</span>':''}</div>
+            <div class="link-list-title">${escapeHtml(link.title)}${linkBadgeHtml(link)} ${link.maintenance ? '<span class="maintenance-chip">🚧 Maintenance</span>' : ''}${pinBadge}${scheduleBadge}${countdownBadge} ${link.clicks?'<span style="font-size:10px;color:var(--muted);margin-left:6px">'+link.clicks+'</span>':''}</div>
             <div class="link-list-url">${escapeHtml(link.url)}</div>
           </div>
           <div class="link-list-actions">
@@ -965,7 +1097,7 @@
       if(uniqueCount >= 3) unlockAchievement('explorer');
       if(uniqueCount >= 6) unlockAchievement('power_click');
       const activeLinks = appData.links.filter(l=>!l.maintenance && isLinkScheduleActive(l));
-      if(activeLinks.length > 0 && uniqueCount >= activeLinks.length) unlockAchievement('completionist');
+      if(activeLinks.length > 0 && activeLinks.every(link=>achvState.clickedLinks.includes(link.id))) unlockAchievement('completionist');
     }
     if(context === 'search'){
       if(!achvState.searched){ achvState.searched = true; saveAchvState(); }
@@ -1125,6 +1257,9 @@
     document.getElementById('socialTT').value = appData.settings.socials.tiktok || '';
     document.getElementById('socialYT').value = appData.settings.socials.youtube || '';
     populateThemePicker();
+    document.getElementById('backgroundUrl').value = appData.settings.backgroundUrl || '';
+    document.getElementById('backgroundDim').value = backgroundDim(appData.settings.backgroundDim);
+    previewBackground();
   }
   function closeAdminModal(){ document.getElementById('adminModal').classList.remove('active'); }
   function openLinkModal(isEdit=false){
@@ -1140,10 +1275,14 @@
       document.getElementById('linkIconUrl').value = '';
       document.getElementById('linkMaintenance').checked = false;
       document.getElementById('linkPinned').checked = false;
+      document.getElementById('linkVerified').checked = false;
+      document.getElementById('linkVerifiedStyle').value = 'solid';
+      document.getElementById('linkVerifiedColor').value = '#38bdf8';
       document.getElementById('linkScheduleStart').value = '';
       document.getElementById('linkScheduleEnd').value = '';
       document.getElementById('linkCountdown').value = '';
     }
+    updateLinkBadgePreview();
   }
   function closeLinkModal(){ document.getElementById('linkModal').classList.remove('active'); }
   
@@ -1159,6 +1298,9 @@
     document.getElementById('linkIconUrl').value = link.iconUrl || '';
     document.getElementById('linkMaintenance').checked = !!link.maintenance;
     document.getElementById('linkPinned').checked = !!link.pinned;
+    document.getElementById('linkVerified').checked = link.verified === true;
+    document.getElementById('linkVerifiedStyle').value = link.verifiedStyle === 'rainbow' ? 'rainbow' : 'solid';
+    document.getElementById('linkVerifiedColor').value = typeof link.verifiedColor === 'string' && /^#[0-9a-f]{6}$/i.test(link.verifiedColor) ? link.verifiedColor : '#38bdf8';
     document.getElementById('linkScheduleStart').value = link.scheduleStart || '';
     document.getElementById('linkScheduleEnd').value = link.scheduleEnd || '';
     document.getElementById('linkCountdown').value = link.countdown || '';
@@ -1357,6 +1499,33 @@
   }
 
   // Admin-managed features. Stored below settings to preserve the existing schema.
+  const DEFAULT_JOY_MESSAGES = [
+    'Kau dah sampai sejauh ini. Itu pun satu kemenangan. ✨',
+    'Ambil nafas. Langkah kecil hari ini tetap bermakna. 🌿',
+    'Semoga ada benda baik datang tanpa kau jangka. 🌟',
+    'Hari yang susah tak bermakna kau tak hebat. 💛',
+    'Teruskan dengan cara kau sendiri. Kau boleh. 🚀',
+    'Senyum sikit—mungkin hari ini lebih baik daripada yang kau sangka. 😊',
+    'Kau layak rasa bangga dengan usaha sendiri. 🏆',
+    'Rehat pun sebahagian daripada perjalanan. ☁️'
+  ];
+  function cleanJoyMessages(value){
+    return Array.isArray(value) ? value.filter(x=>typeof x==='string').map(x=>x.trim().slice(0,160)).filter(Boolean).slice(0,8) : [];
+  }
+  function joyConfig(){
+    const saved=featureConfig().joy;
+    const messages=cleanJoyMessages(saved.messages);
+    return {...saved,messages:messages.length?messages:DEFAULT_JOY_MESSAGES};
+  }
+  function renderJoy(){
+    const card=document.getElementById('littleJoy');if(!card)return;
+    const config=joyConfig();card.hidden=!config.enabled;
+    if(card.hidden)return;
+    card.querySelector('strong').textContent=config.title||'Rehat sekejap, senyum dulu.';
+    const button=document.getElementById('littleJoyButton');button.firstChild.textContent=(config.buttonLabel||'Bagi semangat')+' ';
+    const message=document.getElementById('littleJoyMessage');
+    if(!config.messages.includes(message.textContent))message.textContent=config.hint||'Ada sesuatu yang baik untuk hari kau.';
+  }
   function featureConfig(){
     const s = appData.settings || {};
     return {
@@ -1364,6 +1533,10 @@
       promo: {enabled:false,title:'',text:'',image:'',label:'Lihat tawaran',url:'',frequency:'session',...s.promo},
       store: {enabled:false,mode:'auto',open:'09:00',close:'23:30',...s.store},
       faq: {enabled:false,items:[],...s.faq},
+      appearance: {welcome:'',style:'glass',density:'comfortable',...s.appearance},
+      voice: {enabled:false,title:'Pengumuman H4SX',message:'',audio:'',revision:'',...s.voice},
+      joy: {enabled:true,title:'Rehat sekejap, senyum dulu.',hint:'Ada sesuatu yang baik untuk hari kau.',buttonLabel:'Bagi semangat',messages:DEFAULT_JOY_MESSAGES,...s.joy},
+      shareQrEnabled: s.shareQrEnabled !== false,
       effects: {sakura:true,animation:true,glow:true,lite:false,...s.effects}
     };
   }
@@ -1387,8 +1560,22 @@
   }
   let promoShown = new Set(), promoFocus = null, featureFaqKey = '', orderDraft = [];
   function renderFeatures(){
+    renderJoy();
     const c=featureConfig(), b=document.getElementById('featureBanner');
+    const qrCard=document.getElementById('shareQrCard');
+    const qrButton=document.getElementById('showQrBtn');
+    if(qrCard)qrCard.hidden=!c.shareQrEnabled;
+    if(qrButton)qrButton.hidden=!c.shareQrEnabled;
+    if(!c.shareQrEnabled){
+      document.getElementById('qrModal')?.classList.remove('active');
+      document.getElementById('shareMenu')?.classList.remove('active');
+    }
     if(!b) return;
+    document.body.dataset.linkStyle=['glass','solid','outline'].includes(c.appearance.style)?c.appearance.style:'glass';
+    document.body.dataset.linkDensity=c.appearance.density==='compact'?'compact':'comfortable';
+    const welcome=document.getElementById('profileWelcome');
+    welcome.textContent=c.appearance.welcome;welcome.hidden=!c.appearance.welcome;
+    renderVoice(c.voice);
     b.hidden=!(c.banner.enabled && c.banner.text && (!c.banner.end || Date.now()<Date.parse(c.banner.end)));
     b.textContent=c.banner.text;
     b.style.borderColor=normalizeHex(c.banner.color)||'#ff6fb5';
@@ -1413,7 +1600,7 @@
     const dialog=document.getElementById('promoDialog');
     const p=c.promo, identity=JSON.stringify(p);
     if(dialog.open && (dialog.dataset.campaign!==identity || !p.enabled)) dialog.close();
-    if(!p.enabled || !p.title || document.querySelector('.modal-overlay.active') || dialog.open) return;
+    if(window.h4sxIntroActive || !p.enabled || !p.title || document.querySelector('.modal-overlay.active') || document.getElementById('voiceDialog').open || dialog.open) return;
     const keyStore='h4sx_promo_'+identity;
     const seenIdentity=identity+(p.frequency==='daily'?malaysiaDay():'');
     let seen=promoShown.has(seenIdentity);
@@ -1438,6 +1625,7 @@
     const select=(id,label,options)=>'<label class="feature-field">'+label+'<select class="form-select" id="'+id+'">'+options.map(([v,t])=>'<option value="'+v+'">'+t+'</option>').join('')+'</select></label>';
     el('profileCard').insertAdjacentHTML('beforebegin','<div id="featureBanner" class="feature-banner" hidden></div>');
     el('profileCard').insertAdjacentHTML('afterend','<div id="storeStatus" class="store-status" role="status" hidden></div>');
+    el('profileBio').insertAdjacentHTML('afterend','<p id="profileWelcome" class="profile-welcome" hidden></p>');
     el('socialRow').insertAdjacentHTML('beforebegin','<section id="publicFaq" class="public-faq" hidden></section>');
     document.body.insertAdjacentHTML('beforeend','<dialog id="promoDialog" class="promo-dialog" aria-labelledby="promoHeading"><button type="button" id="closePromo" class="modal-close" aria-label="Tutup promosi">✕</button><img id="promoImage" alt="Promosi H4SX" hidden><h2 id="promoHeading"></h2><p id="promoText"></p><a id="promoAction" class="btn btn-primary" target="_blank" rel="noopener noreferrer" hidden></a></dialog>');
     el('closePromo').onclick=()=>el('promoDialog').close();
@@ -1446,10 +1634,14 @@
     el('promoImage').onerror=()=>{el('promoImage').hidden=true;};
     el('adminModal').querySelector('.tabs').insertAdjacentHTML('beforeend','<button class="tab-btn-modal" data-tab="features">Features</button>');
     el('tab-settings').insertAdjacentHTML('afterend','<div id="tab-features" class="tab-content" style="display:none"><form id="featuresForm">'+
+      '<fieldset><legend>🎙 Pengumuman suara</legend>'+toggle('voiceEnabled','Aktifkan popup suara')+field('voiceTitle','Tajuk pengumuman')+field('voiceMessage','Mesej di bawah audio')+'<label class="feature-field">Mikrofon rakaman<select id="voiceInput" class="form-select"><option value="">Mikrofon lalai sistem</option></select></label><button type="button" class="btn btn-secondary" id="voiceRefreshInputs">↻ Semak mikrofon</button><p id="voiceInputStatus" class="feature-help">Pilih mikrofon yang betul. Benarkan akses apabila browser meminta.</p><div class="voice-admin-actions"><button type="button" class="btn btn-secondary" id="voiceRecord">🎙 Rakam suara</button><button type="button" class="btn btn-secondary" id="voiceStop" disabled>■ Henti rakaman</button><button type="button" class="btn btn-secondary" id="voiceRemove">Buang audio</button></div><div class="voice-recorder-live" id="voiceRecorderLive" hidden><span class="voice-record-dot"></span><strong>SEDANG RAKAM</strong><time id="voiceTimer">00:00</time><meter id="voiceMeter" min="0" max="100" value="0" aria-label="Paras suara mikrofon"></meter></div><label class="feature-field">Atau pilih audio (maksimum 1 MB)<input type="file" id="voiceFile" accept="audio/*" class="form-input"></label><audio id="voicePreview" controls preload="metadata" hidden></audio><p id="voiceRecordStatus" class="feature-help" role="status">Rakam maksimum 45 saat. Simpan features untuk terbitkan.</p><p class="feature-help">Popup sekali setiap sesi tab; pengumuman yang dikemas kini akan muncul semula. Jika browser menyekat autoplay, pengunjung boleh tekan Play.</p></fieldset>'+
+      '<fieldset><legend>🎨 Rupa Linktree</legend>'+field('appearanceWelcome','Ucapan bawah bio (kosong = sembunyi)')+select('appearanceStyle','Gaya butang',[['glass','Kaca'],['solid','Solid'],['outline','Outline']])+select('appearanceDensity','Jarak pautan',[['comfortable','Selesa'],['compact','Rapat']])+'</fieldset>'+
       '<fieldset><legend>📣 Pengumuman</legend>'+toggle('bannerEnabled','Aktifkan banner')+field('bannerText','Teks pengumuman')+field('bannerColor','Warna banner','color')+field('bannerEnd','Tamat pada (waktu Malaysia; kosong = tiada tamat)','datetime-local')+'</fieldset>'+
       '<fieldset><legend>🎁 Popup promosi</legend>'+toggle('promoEnabled','Aktifkan popup')+field('promoTitle','Tajuk')+field('promoBody','Teks promosi')+field('promoImg','URL gambar (pilihan)','url')+field('promoLabel','Teks butang')+field('promoUrl','URL butang (pilihan)','url')+select('promoFrequency','Kekerapan',[['session','Sekali setiap sesi tab'],['daily','Sekali sehari (waktu Malaysia)']])+'</fieldset>'+
       '<fieldset><legend>🕘 Status kedai</legend>'+toggle('storeEnabled','Papar status kedai')+select('storeMode','Mod',[['auto','Automatik — setiap hari'],['open','Manual: buka'],['closed','Manual: tutup']])+field('storeOpen','Waktu buka (Malaysia)','time')+field('storeClose','Waktu tutup (Malaysia)','time')+'<p class="feature-help">Waktu sama = 24 jam. Jadual merentas tengah malam disokong.</p></fieldset>'+
       '<fieldset><legend>💬 FAQ</legend>'+toggle('faqEnabled','Papar soalan lazim')+'<div id="faqEditor"></div><button type="button" class="btn btn-secondary" id="addFaq">+ Tambah soalan</button></fieldset>'+
+      '<fieldset><legend>📱 Kod QR perkongsian</legend>'+toggle('shareQrEnabled','Papar kod QR untuk pelawat')+'<p class="feature-help">Hidupkan untuk paparkan kad QR dan pilihan Kod QR dalam menu Kongsi. Matikan untuk sembunyikan kedua-duanya.</p></fieldset>'+
+      '<fieldset><legend>💛 Bagi semangat</legend>'+toggle('joyEnabled','Papar kad Bagi semangat')+field('joyTitle','Tajuk kad')+field('joyHint','Teks sebelum butang ditekan')+field('joyButtonLabel','Tulisan butang')+'<label class="feature-field" for="joyMessages">Ucapan (satu ayat setiap baris, maksimum 8)<textarea class="form-textarea" id="joyMessages" rows="8" maxlength="1500"></textarea></label><p class="feature-help">Ucapan ini dipaparkan secara rawak apabila pelawat tekan butang. Ucapan berturutan tidak akan sama.</p></fieldset>'+
       '<fieldset><legend>✨ Efek</legend>'+toggle('effectSakura','Kelopak sakura')+toggle('effectAnimation','Animasi')+toggle('effectGlow','Glow')+toggle('effectLite','Mod ringan — matikan animasi, sakura, glow dan blur')+'</fieldset><button type="submit" id="saveFeatures" class="btn btn-primary btn-block">Simpan semua features</button><p id="featureSaveStatus" role="status" class="feature-help"></p></form></div>');
     el('tab-links').insertAdjacentHTML('afterbegin','<details class="order-editor"><summary>↕ Susun pautan</summary><p class="feature-help">Drag kad atau guna ↑ ↓. Urutan digunakan dalam kategori masing-masing; pautan pinned kekal di atas.</p><div id="orderList"></div><button type="button" id="saveOrder" class="btn btn-primary">Simpan susunan</button></details>');
     function addFaq(question='',answer=''){
@@ -1460,6 +1652,11 @@
     el('addFaq').onclick=()=>addFaq();
     function loadForm(){
       const c=featureConfig();
+      loadVoiceEditor(c.voice);
+      el('shareQrEnabled').checked=c.shareQrEnabled;
+      el('joyEnabled').checked=!!c.joy.enabled;el('joyTitle').value=c.joy.title||'';el('joyHint').value=c.joy.hint||'';el('joyButtonLabel').value=c.joy.buttonLabel||'';el('joyMessages').value=cleanJoyMessages(c.joy.messages).join('\n');
+      el('appearanceWelcome').value=c.appearance.welcome;el('appearanceWelcome').maxLength=160;
+      el('appearanceStyle').value=c.appearance.style;el('appearanceDensity').value=c.appearance.density;
       const checks={bannerEnabled:c.banner.enabled,promoEnabled:c.promo.enabled,storeEnabled:c.store.enabled,faqEnabled:c.faq.enabled,effectSakura:c.effects.sakura,effectAnimation:c.effects.animation,effectGlow:c.effects.glow,effectLite:c.effects.lite};
       for(const [id,v] of Object.entries(checks))el(id).checked=!!v;
       let end='';if(c.banner.end && Number.isFinite(Date.parse(c.banner.end)))end=new Date(Date.parse(c.banner.end)+8*3600000).toISOString().slice(0,16);
@@ -1471,17 +1668,26 @@
     new MutationObserver(()=>{if(el('adminModal').classList.contains('active'))loadForm();}).observe(el('adminModal'),{attributes:true,attributeFilter:['class']});
     el('featuresForm').onsubmit=async e=>{
       e.preventDefault();if(!currentUser){showToast('Sila login admin!','warning');return;}
+      if(voiceBusy){showToast('Hentikan atau tunggu rakaman selesai dahulu.','warning');return;}
       const value=id=>el(id).value.trim(),checked=id=>el(id).checked;
       for(const id of ['promoImg','promoUrl'])if(value(id)&&!featureUrl(value(id))){showToast('URL mesti bermula dengan https:// atau http://','error');el(id).focus();return;}
       if(checked('bannerEnabled')&&!value('bannerText') || checked('promoEnabled')&&!value('promoTitle')){showToast('Isi teks banner / tajuk promosi sebelum aktifkan.','warning');return;}
+      const joyLines=value('joyMessages').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+      if(checked('joyEnabled') && joyLines.length===0){showToast('Isi sekurang-kurangnya satu ucapan.','warning');el('joyMessages').focus();return;}
+      if(joyLines.length>8 || joyLines.some(x=>x.length>160)){showToast('Maksimum 8 ucapan, 160 aksara setiap ucapan.','warning');el('joyMessages').focus();return;}
       if(!value('storeOpen')||!value('storeClose')){showToast('Isi kedua-dua waktu kedai.','warning');return;}
       const data={
+        shareQrEnabled:checked('shareQrEnabled'),
+        voice:voiceEditorValue(),
+        joy:{enabled:checked('joyEnabled'),title:value('joyTitle').slice(0,70)||'Rehat sekejap, senyum dulu.',hint:value('joyHint').slice(0,120)||'Ada sesuatu yang baik untuk hari kau.',buttonLabel:value('joyButtonLabel').slice(0,35)||'Bagi semangat',messages:joyLines},
+        appearance:{welcome:value('appearanceWelcome').slice(0,160),style:value('appearanceStyle'),density:value('appearanceDensity')},
         banner:{enabled:checked('bannerEnabled'),text:value('bannerText'),color:value('bannerColor'),end:value('bannerEnd')?new Date(value('bannerEnd')+':00+08:00').toISOString():''},
         promo:{enabled:checked('promoEnabled'),title:value('promoTitle'),text:value('promoBody'),image:value('promoImg'),label:value('promoLabel'),url:value('promoUrl'),frequency:value('promoFrequency')},
         store:{enabled:checked('storeEnabled'),mode:value('storeMode'),open:value('storeOpen'),close:value('storeClose')},
         faq:{enabled:checked('faqEnabled'),items:[...el('faqEditor').children].map(row=>({question:row.querySelector('.faq-question').value.trim(),answer:row.querySelector('.faq-answer').value.trim()}))},
         effects:{sakura:checked('effectSakura'),animation:checked('effectAnimation'),glow:checked('effectGlow'),lite:checked('effectLite')}
       };
+      if(data.voice.enabled && !validVoiceAudio(data.voice.audio)){showToast('Rakam atau pilih audio sebelum aktifkan pengumuman.','warning');return;}
       el('saveFeatures').disabled=true;el('featureSaveStatus').textContent='Menyimpan…';
       try{
         await authReady;if(!currentUser||!isFirebaseReady)throw new Error('Sila login dan pastikan sambungan tersedia.');
@@ -1511,10 +1717,237 @@
     setInterval(()=>{if(!document.hidden)renderFeatures();},15000);
   }
 
+
+  // Short recorded announcements are saved with the existing Firebase settings.
+  // No live microphone audio is sent until the administrator explicitly saves.
+  let voiceDraft='',voiceBusy=false,voiceRecorder=null,voiceStream=null,voiceLimitTimer=null,voiceTicker=null;
+  let voiceRaf=null,voiceAudioContext=null;
+  let voiceFocus=null,voiceSeen=new Set();
+  function validVoiceAudio(value){
+    return typeof value==='string' && value.length<=1450000 &&
+      /^data:audio\/(mpeg|mp3|wav|x-wav|ogg|webm|mp4|aac|x-m4a)(?:;codecs=[a-zA-Z0-9., -]+)?;base64,[A-Za-z0-9+/=\r\n]+$/.test(value);
+  }
+  function voiceEditorValue(){
+    const old=featureConfig().voice;
+    const next={enabled:document.getElementById('voiceEnabled').checked,title:document.getElementById('voiceTitle').value.trim().slice(0,100)||'Pengumuman H4SX',message:document.getElementById('voiceMessage').value.trim().slice(0,500),audio:voiceDraft};
+    const changed=['enabled','title','message','audio'].some(k=>next[k]!==old[k]);
+    return {...next,revision:changed?Date.now().toString(36):old.revision};
+  }
+  function loadVoiceEditor(v){
+    if(voiceBusy) return;
+    voiceDraft=validVoiceAudio(v.audio)?v.audio:'';
+    document.getElementById('voiceEnabled').checked=!!v.enabled;
+    document.getElementById('voiceTitle').value=v.title||'';
+    document.getElementById('voiceMessage').value=v.message||'';
+    document.getElementById('voiceFile').value='';
+    const preview=document.getElementById('voicePreview');preview.pause();
+    preview.hidden=!voiceDraft;if(voiceDraft)preview.src=voiceDraft;else preview.removeAttribute('src');
+  }
+  function voiceMarkSeen(v){
+    const key='h4sx_voice_seen',revision=v.revision||'initial';
+    voiceSeen.add(revision);try{sessionStorage.setItem(key,revision);}catch(e){}
+  }
+  function openVoice(v){
+    const dialog=document.getElementById('voiceDialog'),audio=document.getElementById('voiceAudio');
+    if(!v.enabled||!validVoiceAudio(v.audio))return;
+    document.getElementById('voiceHeading').textContent=v.title||'Pengumuman H4SX';
+    document.getElementById('voiceMessagePublic').textContent=v.message||'Tekan Play untuk dengar pengumuman.';
+    if(audio.getAttribute('src')!==v.audio)audio.src=v.audio;
+    if(!dialog.open){voiceFocus=document.activeElement;dialog.showModal();}
+    dialog.dataset.revision=v.revision||'initial';
+    voiceMarkSeen(v);
+    audio.play().catch(()=>{document.getElementById('voicePlaybackStatus').textContent='Tekan Play untuk dengar pengumuman.';});
+  }
+  function renderVoice(v){
+    const dialog=document.getElementById('voiceDialog'),button=document.getElementById('openVoice');
+    if(!dialog||!button)return;
+    const available=v.enabled&&validVoiceAudio(v.audio);
+    button.hidden=!available;
+    if(dialog.open && (!available||dialog.dataset.revision!==(v.revision||'initial')))dialog.close();
+    if(window.h4sxIntroActive||!available||dialog.open||document.querySelector('.modal-overlay.active')||document.getElementById('promoDialog').open)return;
+    let seen=voiceSeen.has(v.revision||'initial');
+    try{seen=seen||sessionStorage.getItem('h4sx_voice_seen')===(v.revision||'initial');}catch(e){}
+    if(!seen)openVoice(v);
+  }
+  function voiceInputError(error){
+    switch(error?.name){
+      case 'NotAllowedError': case 'SecurityError': return 'Akses mikrofon disekat. Benarkan Microphone pada tetapan laman browser dan privasi mikrofon Windows, kemudian cuba lagi.';
+      case 'NotFoundError': return 'Tiada mikrofon ditemui. Sambungkan mikrofon atau headset dahulu.';
+      case 'NotReadableError': return 'Mikrofon tidak boleh dibaca. Tutup aplikasi yang sedang menggunakan mikrofon dan cuba lagi.';
+      case 'OverconstrainedError': return 'Mikrofon pilihan tidak lagi tersedia. Tekan Semak mikrofon dan pilih peranti lain.';
+      default: return 'Rakaman gagal: ' + (error?.message || 'mikrofon tidak tersedia') + '. Cuba lagi atau pilih fail audio.';
+    }
+  }
+  function voiceRms(samples){
+    return Math.sqrt(samples.reduce((sum,value)=>sum+value*value,0)/Math.max(1,samples.length));
+  }
+  function initVoice(){
+    const el=id=>document.getElementById(id);
+    el('profileCard').insertAdjacentHTML('afterend','<button id="openVoice" class="voice-open" type="button" hidden>🎙 Dengar pengumuman</button>');
+    document.body.insertAdjacentHTML('beforeend','<dialog class="voice-dialog" id="voiceDialog" aria-labelledby="voiceHeading"><header class="voice-header"><span>📣 Pengumuman H4SX</span><button type="button" class="voice-close" id="closeVoice" aria-label="Tutup pengumuman">✕</button></header><div class="voice-body"><h2 id="voiceHeading"></h2><audio id="voiceAudio" controls preload="metadata"></audio><p id="voicePlaybackStatus" role="status">Tekan Play untuk dengar pengumuman.</p><p id="voiceMessagePublic"></p></div></dialog>');
+    el('closeVoice').onclick=()=>el('voiceDialog').close();
+    el('voiceDialog').addEventListener('close',()=>{el('voiceAudio').pause();if(voiceFocus?.isConnected)voiceFocus.focus();});
+    el('openVoice').onclick=()=>openVoice(featureConfig().voice);
+    el('voiceAudio').onplay=()=>{if(isPlaying)pauseMusic();el('voicePlaybackStatus').textContent='Sedang dimainkan…';};
+    el('voiceAudio').onended=()=>{el('voicePlaybackStatus').textContent='Selesai. Boleh main semula bila-bila masa.';};
+    el('voiceAudio').onerror=()=>{el('voicePlaybackStatus').textContent='Audio tidak boleh dimainkan dalam browser ini. Cuba browser lain.';};
+    el('voiceTitle').maxLength=100;el('voiceMessage').maxLength=500;
+    const status=text=>{el('voiceRecordStatus').textContent=text;};
+    let peak=0,meterAvailable=false,recordingStarted=0,interrupted=false,requestId=0;
+    const setBusy=busy=>{
+      voiceBusy=busy;
+      ['voiceRecord','voiceFile','voiceRemove','voiceInput','voiceRefreshInputs'].forEach(id=>el(id).disabled=busy);
+    };
+    async function listInputs(){
+      if(!navigator.mediaDevices?.enumerateDevices)return;
+      const selected=el('voiceInput').value;
+      const devices=await navigator.mediaDevices.enumerateDevices();
+      const select=el('voiceInput');select.replaceChildren(new Option('Mikrofon lalai sistem',''));
+      devices.filter(d=>d.kind==='audioinput').forEach((d,i)=>{
+        if(d.deviceId)select.add(new Option(d.label || 'Mikrofon '+(i+1),d.deviceId));
+      });
+      if([...select.options].some(o=>o.value===selected))select.value=selected;
+    }
+    el('voiceRefreshInputs').onclick=async()=>{
+      if(!navigator.mediaDevices?.getUserMedia){status('Buka laman melalui HTTPS atau http://localhost untuk akses mikrofon.');return;}
+      setBusy(true);let stream;
+      try{
+        stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+        await listInputs();
+        el('voiceInputStatus').textContent='Senarai dikemas kini. Pilih mikrofon headset atau mikrofon yang anda gunakan.';
+      }catch(e){status(voiceInputError(e));}
+      finally{stream?.getTracks().forEach(t=>t.stop());setBusy(false);}
+    };
+    listInputs().catch(()=>{});
+    navigator.mediaDevices?.addEventListener?.('devicechange',()=>{if(!voiceBusy)listInputs().catch(()=>{});});
+    const stopMeter=()=>{
+      clearInterval(voiceTicker);clearTimeout(voiceLimitTimer);cancelAnimationFrame(voiceRaf);
+      voiceTicker=voiceLimitTimer=voiceRaf=null;
+      if(voiceAudioContext){voiceAudioContext.close().catch(()=>{});voiceAudioContext=null;}
+      el('voiceRecorderLive').hidden=true;el('voiceMeter').value=0;
+    };
+    const stopTracks=()=>{stopMeter();voiceStream?.getTracks().forEach(t=>t.stop());voiceStream=null;};
+    const startMeter=stream=>{
+      recordingStarted=Date.now();peak=0;meterAvailable=false;
+      el('voiceRecorderLive').hidden=false;el('voiceTimer').textContent='00:00';
+      voiceTicker=setInterval(()=>{
+        const seconds=Math.floor((Date.now()-recordingStarted)/1000);
+        el('voiceTimer').textContent='00:'+String(seconds).padStart(2,'0');
+        if(seconds>=4 && meterAvailable && peak<0.003)status('Belum ada bunyi dikesan. Cuba cakap dekat mikrofon, semak butang mute atau pilih mikrofon lain.');
+      },250);
+      if(!voiceAudioContext)return;
+      try{
+        const context=voiceAudioContext,analyser=context.createAnalyser();analyser.fftSize=2048;
+        context.createMediaStreamSource(stream).connect(analyser);
+        const samples=new Float32Array(analyser.fftSize);
+        const draw=()=>{
+          if(context.state==='closed')return;
+          if(context.state==='running'){
+            analyser.getFloatTimeDomainData(samples);
+            const rms=voiceRms(samples),previous=peak;peak=Math.max(peak,rms);meterAvailable=true;
+            el('voiceMeter').value=Math.min(100,Math.round(rms*500));
+            if(previous<0.003 && peak>=0.003)status('Bunyi mikrofon dikesan. Teruskan bercakap, kemudian tekan Henti rakaman.');
+          }
+          voiceRaf=requestAnimationFrame(draw);
+        };draw();
+      }catch(e){meterAvailable=false;}
+    };
+    function acceptAudio(blob,warning=''){
+      if(!blob.size||blob.size>1048576){setBusy(false);status('Audio mesti tidak kosong dan di bawah 1 MB. Cuba rakaman lebih pendek.');return;}
+      setBusy(true);const reader=new FileReader();
+      reader.onload=()=>{
+        if(!validVoiceAudio(reader.result)){status('Format tidak disokong. Pilih MP3, M4A, WAV, OGG atau WebM.');setBusy(false);return;}
+        const preview=el('voicePreview');voiceDraft=reader.result;preview.src=voiceDraft;preview.hidden=false;preview.load();
+        status(warning || 'Audio sedia. Tekan Play untuk semak suara, kemudian Simpan semua features.');setBusy(false);
+      };
+      reader.onerror=()=>{status('Gagal membaca audio. Cuba lagi.');setBusy(false);};
+      reader.readAsDataURL(blob);
+    }
+    el('voicePreview').onerror=()=>status('Audio tidak dapat dimainkan. Cuba rakam semula atau pilih fail MP3.');
+    el('voiceFile').onchange=e=>{const file=e.target.files[0];if(file)acceptAudio(file);};
+    el('voiceRemove').onclick=()=>{voiceDraft='';el('voicePreview').pause();el('voicePreview').removeAttribute('src');el('voicePreview').hidden=true;el('voiceFile').value='';el('voiceEnabled').checked=false;status('Audio dibuang daripada draf. Simpan untuk kemas kini website.');};
+    el('voiceRecord').onclick=async()=>{
+      if(voiceBusy)return;
+      if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){status('Rakaman memerlukan HTTPS atau http://localhost dan browser yang menyokong mikrofon. Boleh pilih fail audio.');return;}
+      const request=++requestId;
+      setBusy(true);el('voiceStop').disabled=true;interrupted=false;
+      status('Benarkan akses mikrofon untuk merakam…');
+      // Resume within the button gesture, before waiting for microphone permission.
+      try{
+        const AudioCtx=window.AudioContext||window.webkitAudioContext;
+        if(AudioCtx){voiceAudioContext=new AudioCtx();voiceAudioContext.resume().catch(()=>{});}
+      }catch(e){voiceAudioContext=null;}
+      try{
+        const selected=el('voiceInput').value;
+        const stream=await navigator.mediaDevices.getUserMedia({audio:{...(selected?{deviceId:{exact:selected}}:{}),echoCancellation:true,noiseSuppression:false,autoGainControl:true,channelCount:{ideal:1}},video:false});
+        if(request!==requestId || !el('adminModal').classList.contains('active')){stream.getTracks().forEach(t=>t.stop());stopTracks();setBusy(false);return;}
+        voiceStream=stream;
+        const track=stream.getAudioTracks()[0];
+        if(!track || track.readyState!=='live')throw new Error('Mikrofon tidak mempunyai trek audio aktif');
+        el('voiceInputStatus').textContent='Sedang guna: '+(track.label || 'Mikrofon lalai');
+        listInputs().catch(()=>{});
+        el('voicePreview').pause();el('voiceAudio').pause();if(isPlaying)pauseMusic();
+        const mime=['audio/webm;codecs=opus','audio/mp4','audio/ogg;codecs=opus'].find(t=>MediaRecorder.isTypeSupported?.(t));
+        const recorder=new MediaRecorder(stream,{...(mime?{mimeType:mime}:{}),audioBitsPerSecond:64000});
+        voiceRecorder=recorder;
+        const chunks=[];let size=0,failed=false;
+        track.onmute=()=>status('Input mikrofon sedang mute atau terganggu. Semak mikrofon anda.');
+        track.onunmute=()=>status('Mikrofon kembali aktif. Teruskan bercakap.');
+        track.onended=()=>{if(recorder.state==='recording'){interrupted=true;recorder.stop();}};
+        recorder.ondataavailable=e=>{if(e.data.size){chunks.push(e.data);size+=e.data.size;if(size>1048576&&recorder.state==='recording')recorder.stop();}};
+        recorder.onerror=()=>{failed=true;stopTracks();voiceRecorder=null;setBusy(false);el('voiceStop').disabled=true;status('Rakaman gagal. Cuba lagi atau pilih fail audio.');};
+        recorder.onstop=()=>{
+          const type=(recorder.mimeType||chunks[0]?.type||'audio/webm').split(';')[0];
+          const warning=interrupted?'Mikrofon terputus. Semak audio yang sempat dirakam sebelum simpan.':meterAvailable&&peak<0.003?'Rakaman mungkin senyap atau terlalu perlahan. Tekan Play untuk semak; pilih mikrofon lain dan rakam semula jika perlu.':!meterAvailable?'Audio dirakam, tetapi paras suara tidak dapat disemak. Tekan Play untuk pastikan suara ada sebelum simpan.':'';
+          stopTracks();if(voiceRecorder===recorder)voiceRecorder=null;el('voiceStop').disabled=true;
+          if(!failed){const blob=new Blob(chunks,{type});if(blob.size)acceptAudio(blob,warning);else{setBusy(false);status('Rakaman kosong. Semak mikrofon dan cuba rakam semula.');}}
+        };
+        recorder.start(250);startMeter(stream);el('voiceStop').disabled=false;
+        status(track.muted?'Mikrofon sedang mute. Semak mikrofon anda.':'Cakap sekarang. Meter suara akan bergerak apabila bunyi diterima.');
+        voiceLimitTimer=setTimeout(()=>{if(recorder.state==='recording')recorder.stop();},45000);
+      }catch(e){stopTracks();voiceRecorder=null;setBusy(false);el('voiceStop').disabled=true;status(voiceInputError(e));}
+    };
+    el('voiceStop').onclick=()=>{if(voiceRecorder?.state==='recording'){el('voiceStop').disabled=true;status('Memproses rakaman…');voiceRecorder.stop();}};
+    new MutationObserver(()=>{
+      if(!el('adminModal').classList.contains('active')){
+        ++requestId;
+        if(voiceRecorder?.state==='recording')voiceRecorder.stop();
+        else if(voiceBusy)stopTracks();
+      }
+    }).observe(el('adminModal'),{attributes:true,attributeFilter:['class']});
+    window.addEventListener('pagehide',stopTracks);
+  }
+
   // INIT - Execute immediately (not DOMContentLoaded)
   (function init(){
+    document.getElementById('identityExtras').appendChild(document.querySelector('.side-widget-right'));
+    document.getElementById('communityPanel').appendChild(document.querySelector('.side-widget-left'));
+    document.querySelectorAll('button[title]').forEach(b=>b.setAttribute('aria-label',b.title));
+    document.querySelectorAll('.modal-close').forEach(b=>b.setAttribute('aria-label','Tutup'));
+    document.querySelectorAll('.form-group').forEach(group=>{
+      const label=group.querySelector('label.form-label'),input=group.querySelector('input[id],textarea[id],select[id]');
+      if(label && input)label.htmlFor=input.id;
+    });
     initFeatures();
+    initVoice();
+    window.addEventListener('h4sx:intro-dismissed', ()=>{ renderFeatures(); });
     initFirebase();
+    let lastJoy = -1;
+    document.getElementById('littleJoyButton').addEventListener('click', e=>{
+      const messages=joyConfig().messages;
+      let next=messages.length===1?0:Math.floor(Math.random()*(messages.length-1));
+      if(messages.length>1 && next>=lastJoy && lastJoy<messages.length)next++;
+      lastJoy=next;
+      const message = document.getElementById('littleJoyMessage');
+      message.textContent = messages[next];
+      message.classList.remove('joy-reveal');
+      void message.offsetWidth;
+      if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+        message.classList.add('joy-reveal');
+        const rect = e.currentTarget.getBoundingClientRect();
+        createConfetti(rect.left+rect.width/2,rect.top+rect.height/2);
+      }
+    });
     initSideWidgets();
     
     // Event listeners...
@@ -1752,13 +2185,14 @@
     });
     document.getElementById('volumeSlider').addEventListener('input', (e)=>{ if(audioElement){ audioElement.volume = e.target.value; } });
     
+    ['linkVerified','linkVerifiedStyle','linkVerifiedColor','linkTitle'].forEach(id=>document.getElementById(id).addEventListener('input',updateLinkBadgePreview));
     document.getElementById('saveLinkBtn').addEventListener('click', ()=>{
       if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
       const title = document.getElementById('linkTitle').value.trim();
       const url = document.getElementById('linkUrl').value.trim();
       if(!title || !url){ showToast('Tajuk dan URL wajib diisi!', 'warning'); return; }
       const editId = document.getElementById('editLinkId').value;
-      const linkData = { title, url, desc: document.getElementById('linkDesc').value.trim(), category: document.getElementById('linkCategory').value.trim() || 'Utama', icon: document.getElementById('linkIcon').value.trim(), iconUrl: document.getElementById('linkIconUrl').value.trim(), maintenance: document.getElementById('linkMaintenance').checked, pinned: document.getElementById('linkPinned').checked, scheduleStart: document.getElementById('linkScheduleStart').value || null, scheduleEnd: document.getElementById('linkScheduleEnd').value || null, countdown: document.getElementById('linkCountdown').value || null, clicks: 0 };
+      const linkData = { title, url, desc: document.getElementById('linkDesc').value.trim(), category: document.getElementById('linkCategory').value.trim() || 'Utama', icon: document.getElementById('linkIcon').value.trim(), iconUrl: document.getElementById('linkIconUrl').value.trim(), maintenance: document.getElementById('linkMaintenance').checked, pinned: document.getElementById('linkPinned').checked, verified: document.getElementById('linkVerified').checked, verifiedStyle: document.getElementById('linkVerifiedStyle').value === 'rainbow' ? 'rainbow' : 'solid', verifiedColor: document.getElementById('linkVerifiedColor').value, scheduleStart: document.getElementById('linkScheduleStart').value || null, scheduleEnd: document.getElementById('linkScheduleEnd').value || null, countdown: document.getElementById('linkCountdown').value || null, clicks: 0 };
       const btn = document.getElementById('saveLinkBtn');
       btn.disabled = true; btn.textContent = 'Menyimpan...';
       const doSave = ()=>{
@@ -1833,8 +2267,26 @@
       });
     });
 
-    document.getElementById('saveSettingsBtn').addEventListener('click', ()=>{
+    document.getElementById('backgroundPreviewBtn').addEventListener('click', previewBackground);
+    document.getElementById('backgroundDim').addEventListener('input', ()=>{
+      const dim = backgroundDim(document.getElementById('backgroundDim').value);
+      document.getElementById('backgroundDimValue').textContent = dim + '%';
+      document.getElementById('backgroundPreview').style.setProperty('--background-dim', dim/100);
+    });
+    document.getElementById('backgroundUrl').addEventListener('input', ()=>{
+      ++previewRequest;
+      document.getElementById('backgroundPreview').style.backgroundImage = 'none';
+      document.getElementById('backgroundStatus').textContent = 'Tekan Pratonton untuk semak gambar.';
+    });
+    document.getElementById('backgroundResetBtn').addEventListener('click', ()=>{
+      document.getElementById('backgroundUrl').value = '';
+      document.getElementById('backgroundDim').value = 45;
+      previewBackground();
+    });
+    document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
       if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
+      const url = backgroundUrl(document.getElementById('backgroundUrl').value);
+      if(url === null){ showToast('URL background mesti guna HTTPS.', 'warning'); return; }
       const gradA    = normalizeHex(document.getElementById('hexGradA').value)   || appData.settings.gradientA   || '#ff6fb5';
       const gradB    = normalizeHex(document.getElementById('hexGradB').value)   || appData.settings.gradientB   || '#ba55d3';
       const accentC  = normalizeHex(document.getElementById('hexAccent').value)  || appData.settings.accentColor || '#ff6fb5';
@@ -1846,15 +2298,24 @@
       };
       const newSettings = {
         ...appData.settings,
+        designVersion: 3,
+        backgroundUrl: url,
+        backgroundDim: backgroundDim(document.getElementById('backgroundDim').value),
         theme: appData.settings.theme || 'dark',
         accentColor: accentC,
         gradientA: gradA,
         gradientB: gradB,
         socials: socials
       };
-      appData.settings = newSettings;
-      applyTheme();
-      saveToFirebase('settings', newSettings);
+      const button = document.getElementById('saveSettingsBtn');
+      button.disabled = true;
+      try{
+        await saveToFirebase('settings', newSettings);
+        appData.settings = newSettings;
+        cacheData(appData);
+        applyTheme();
+      }catch(e){ /* saveToFirebase displays the error; keep the saved theme. */ }
+      finally{ button.disabled = false; }
     });
     
     document.addEventListener('keydown', (e)=>{

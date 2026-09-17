@@ -2,24 +2,24 @@
 <html lang="ms" style="margin:0;padding:0;">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#080612">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#090710">
 <meta name="description" content="Semua pautan rasmi H4SX Store, generator sensitiviti Free Fire dan sokongan pelanggan dalam satu tempat.">
 <title>H4SX Gateway — Official Links</title>
 <link rel="icon" type="image/png" href="https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<link rel="stylesheet" href="style.css?v=secured-1-features-2">
+<script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<link rel="stylesheet" href="style.css?v=secured-1-badge-6">
 </head>
 <body data-theme="dark">
 
 <div class="sync-bar" id="syncBar"></div>
 
 <!-- ===== SIDE WIDGETS (desktop only, hidden < 1200px) ===== -->
-<aside class="side-widget side-widget-left" aria-hidden="true">
+<aside class="side-widget side-widget-left" aria-label="Aktiviti komuniti">
   <div class="widget-card">
     <div class="widget-title">Kedah Time</div>
     <div class="widget-clock" id="kdhClock">--:--</div>
@@ -55,14 +55,14 @@
   </div>
 </aside>
 
-<aside class="side-widget side-widget-right" aria-hidden="true">
+<aside class="side-widget side-widget-right" aria-label="Pilihan dan perkongsian">
   <div class="featured-card" id="sideFeaturedCard">
     <div class="featured-badge">⭐ FEATURED</div>
     <div class="featured-title" id="sideFeaturedTitle">Sensitivity Generator</div>
     <div class="featured-desc" id="sideFeaturedDesc">Pro Player Presets - Free Fire</div>
     <button class="featured-btn" id="sideFeaturedBtn" type="button">Cuba Sekarang →</button>
   </div>
-  <div class="widget-card">
+  <div class="widget-card" id="shareQrCard">
     <div class="widget-title">Share Page</div>
     <div class="qr-wrap">
       <img class="qr-img" id="pageQR" alt="Scan to share" src="">
@@ -76,25 +76,92 @@
 <div class="scroll-progress" id="scrollProgress"></div>
 
 <!-- Redirect transition overlay — shown when a visitor taps a link -->
-<div class="redirect-overlay" id="redirectOverlay">
+<div class="redirect-overlay" id="redirectOverlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="redirectTitle" aria-describedby="redirectSub">
   <div class="redirect-card">
+    <div class="redirect-brand"><span class="redirect-brand-dot"></span> H4SX <span>/</span> GATEWAY</div>
     <div class="redirect-icon-wrap">
-      <div class="redirect-icon" id="redirectIcon">🔗</div>
-      <svg class="redirect-ring" viewBox="0 0 100 100">
-        <circle class="redirect-ring-bg" cx="50" cy="50" r="45"></circle>
-        <circle class="redirect-ring-fg" id="redirectRingFg" cx="50" cy="50" r="45"></circle>
-      </svg>
+      <div class="redirect-orbit"></div>
+      <div class="redirect-icon" id="redirectIcon">↗</div>
+      <span class="redirect-arrow" aria-hidden="true">↗</span>
     </div>
-    <div class="redirect-title" id="redirectTitle">Membuka pautan...</div>
-    <div class="redirect-sub">Anda akan dibawa keluar dari laman ini</div>
-    <button class="btn btn-secondary redirect-cancel" id="redirectCancelBtn">✕ Batal</button>
+    <div class="redirect-eyebrow" id="redirectStatus" role="status">Menyediakan destinasi</div>
+    <h2 class="redirect-title" id="redirectTitle">Pautan pilihan</h2>
+    <div class="redirect-domain"><span aria-hidden="true">↗</span> <span id="redirectDomain"></span></div>
+    <div class="redirect-progress" aria-hidden="true"><span></span></div>
+    <p class="redirect-sub" id="redirectSub">Pautan anda akan dibuka dalam tab baharu.</p>
+    <a class="redirect-continue" id="redirectContinue" target="_blank" rel="noopener noreferrer">Buka sekarang <span aria-hidden="true">↗</span></a>
+    <button type="button" class="redirect-cancel" id="redirectCancelBtn">Batal</button>
+    <div class="redirect-footnote">OFFICIAL LINKS · H4SX</div>
   </div>
 </div>
 <!-- Loading -->
-<div class="loading-overlay" id="loadingOverlay" style="display:none">
-  <div class="loading-spinner"></div>
-  <div class="loading-text">Memuatkan H4SX Gateway...</div>
-</div>
+<dialog class="loading-overlay intro-dialog" id="loadingOverlay" aria-labelledby="introTitle" aria-describedby="introStatus">
+  <div class="intro-ambient" aria-hidden="true"></div>
+  <button type="button" class="intro-close" id="introClose" aria-label="Tutup loading dan masuk website">✕</button>
+  <div class="intro-content">
+    <div class="intro-kicker">THE OFFICIAL EXPERIENCE</div>
+    <div class="intro-logo-wrap">
+      <div class="intro-orbit" aria-hidden="true"></div>
+      <div class="intro-logo-core"><span aria-hidden="true">H4<span>SX</span></span><img id="introLogo" src="https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png" alt="Logo H4SX"></div>
+      <span class="intro-spark" aria-hidden="true">✦</span>
+    </div>
+    <div class="intro-eyebrow">SELAMAT DATANG</div>
+    <h1 id="introTitle">H4SX <span>Gateway</span></h1>
+    <p class="intro-description">Satu tempat. Semua pautan pilihan anda.</p>
+    <div class="intro-progress" aria-hidden="true"><span></span></div>
+    <p id="introStatus" class="intro-status" role="status">Menyiapkan pengalaman anda</p>
+    <div class="intro-hint">Tekan ✕ untuk terus masuk</div>
+  </div>
+  <div class="intro-footer"><span>H4SX / OFFICIAL LINKS</span><span class="intro-footer-dot"></span><span>WELCOME IN</span></div>
+</dialog>
+<script>
+(() => {
+  const dialog = document.getElementById('loadingOverlay');
+  const close = document.getElementById('introClose');
+  const status = document.getElementById('introStatus');
+  const start = Date.now();
+  let done = false, finishTimer, safetyTimer, stageTimer;
+  window.h4sxIntroActive = true;
+  const cleanup = () => {
+    clearTimeout(finishTimer); clearTimeout(safetyTimer); clearTimeout(stageTimer);
+    window.removeEventListener('h4sx:data-ready', ready);
+    window.h4sxIntroActive = false;
+    document.body.classList.remove('intro-loading');
+    window.dispatchEvent(new Event('h4sx:intro-dismissed'));
+  };
+  function dismiss(immediate = false) {
+    if (done) return;
+    done = true;
+    clearTimeout(finishTimer); clearTimeout(safetyTimer); clearTimeout(stageTimer);
+    const end = () => { dialog.close(); dialog.hidden = true; cleanup(); };
+    if (immediate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) end();
+    else { dialog.classList.add('intro-leaving'); finishTimer = setTimeout(end, 320); }
+  }
+  function ready() {
+    if (done) return;
+    dialog.style.setProperty('--intro-progress', '100%');
+    status.textContent = 'Sedia untuk diterokai';
+    clearTimeout(stageTimer);
+    if (!finishTimer) finishTimer = setTimeout(() => dismiss(), Math.max(350, 1800 - (Date.now() - start)));
+  }
+  close.addEventListener('click', () => dismiss(true));
+  dialog.addEventListener('cancel', e => { e.preventDefault(); dismiss(true); });
+  dialog.addEventListener('close', () => { if (!done) { done = true; dialog.hidden = true; cleanup(); } });
+  const logo = document.getElementById('introLogo');
+  logo.onerror = () => { logo.hidden = true; };
+  logo.onload = () => { logo.hidden = false; };
+  window.addEventListener('h4sx:data-ready', ready);
+  try { dialog.showModal(); document.body.classList.add('intro-loading'); }
+  catch (e) { done = true; dialog.hidden = true; cleanup(); return; }
+  stageTimer = setTimeout(() => {
+    dialog.style.setProperty('--intro-progress', '72%');
+    status.textContent = 'Menyediakan pautan untuk anda';
+  }, 750);
+  // Keep the site accessible even if an external script or connection stalls.
+  safetyTimer = setTimeout(() => dismiss(), 6000);
+})();
+
+</script>
 
 <!-- SAKURA BACKGROUND -->
 <div class="bg-wrap" id="bgWrap">
@@ -117,8 +184,8 @@
   <!-- Top Bar -->
   <div class="top-bar">
     <div class="top-brand" aria-label="H4SX Gateway">
-      <span class="top-brand-mark">H4</span>
-      <span class="top-brand-copy"><strong>H4SX</strong><small>GATEWAY / OFFICIAL</small></span>
+      <span class="top-brand-mark"><span>H4</span><em>SX</em></span>
+      <span class="top-brand-copy"><strong>H4SX GATEWAY</strong><small>OFFICIAL LINKS</small></span>
     </div>
     <button class="icon-btn" id="globalMusicBtn" title="Main Muzik">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="globalMusicIcon">
@@ -195,7 +262,9 @@
   </div>
   
   <!-- Profile Card -->
-  <div class="profile-card floating" id="profileCard">
+  <div class="gateway-layout">
+  <section class="identity-column" aria-label="Profil H4SX">
+  <div class="profile-card" id="profileCard">
     <div class="avatar-ring">
       <div class="avatar-inner">
         <img id="avatarImg" src="https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png" alt="H4SX Logo" onerror="this.style.display='none'">
@@ -203,8 +272,8 @@
       <div class="online-dot"></div>
     </div>
     <div class="profile-copy">
-      <div class="eyebrow"><span></span> OFFICIAL H4SX NETWORK</div>
-      <div class="name" id="profileName">
+      <div class="eyebrow">H4SX / OFFICIAL</div>
+      <h1 class="name" id="profileName">
         H4SX Gateway
         <span class="verified-badge">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -212,7 +281,7 @@
             <path d="M8.5 12.5l2.5 2.5 5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </span>
-      </div>
+      </h1>
       <div class="handle" id="profileHandle">@h4sx.official</div>
       <div class="bio" id="profileBio">Free Fire Sensitivity Generator | Pro Player Presets | Official website | Support whatsapp</div>
       <div class="profile-badges">
@@ -239,18 +308,25 @@
     </div>
   </div>
   
-  <!-- Logo Banner -->
+  <div class="little-joy" id="littleJoy">
+    <div class="little-joy-mark" aria-hidden="true">✦</div>
+    <div class="little-joy-copy"><strong>Rehat sekejap, senyum dulu.</strong><span id="littleJoyMessage" role="status" aria-live="polite">Ada sesuatu yang baik untuk hari kau.</span></div>
+    <button type="button" id="littleJoyButton" class="little-joy-button" aria-label="Dapatkan ucapan positif">Bagi semangat <span aria-hidden="true">↗</span></button>
+  </div>
+    <!-- Logo Banner -->
   <div class="logo-banner-wrap" aria-hidden="true">
     <img id="logoBannerImg" src="https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png" alt="H4SX Logo" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid var(--accent);box-shadow:0 4px 25px rgba(255,111,181,0.5)">
   </div>
-  
+  <div id="identityExtras"></div>
+  </section>
+  <main class="directory-panel" id="directoryPanel">
   <!-- Search Bar -->
   <div class="search-wrap">
     <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="11" cy="11" r="8"/>
       <line x1="21" y1="21" x2="16.65" y2="16.65"/>
     </svg>
-    <input type="text" class="search-box" id="searchInput" placeholder="Cari pautan...">
+    <input type="search" class="search-box" id="searchInput" aria-label="Cari pautan" placeholder="Cari pautan, tools atau bantuan…">
   </div>
   
   <!-- Category Tabs -->
@@ -266,10 +342,13 @@
   <!-- Social Media Buttons -->
   <div class="social-row" id="socialRow"></div>
   
-  <div class="footer-text">MADE BY | H4SX STORE • Powered by Firebase</div>
+  <div class="footer-text">H4SX STORE · OFFICIAL GATEWAY</div>
   <div class="footer-actions">
     <button class="footer-action-btn" id="openAdminBtn">⚙️ Panel Admin</button>
   </div>
+  </main>
+  </div>
+  <section class="community-panel" id="communityPanel" aria-label="Komuniti H4SX"><h2>Di sekitar H4SX</h2></section>
 </div>
 
 <!-- Music Player -->
@@ -422,6 +501,19 @@
       <!-- TAB: SETTINGS -->
       <div id="tab-settings" class="tab-content" style="display:none">
         <div class="form-group">
+          <label class="form-label" for="backgroundUrl">Background Custom — URL Gambar</label>
+          <input type="url" class="form-input" id="backgroundUrl" placeholder="https://example.com/background.jpg" aria-describedby="backgroundHelp backgroundStatus">
+          <p id="backgroundHelp" class="background-help">Guna link terus ke gambar JPG, PNG, WebP atau GIF melalui HTTPS. Kosongkan untuk background asal.</p>
+          <div class="background-actions">
+            <button type="button" class="btn btn-secondary" id="backgroundPreviewBtn">Pratonton</button>
+            <button type="button" class="btn btn-secondary" id="backgroundResetBtn">Reset Background</button>
+          </div>
+          <label class="form-label" for="backgroundDim">Gelapkan gambar: <output id="backgroundDimValue" for="backgroundDim">45%</output></label>
+          <input type="range" id="backgroundDim" min="0" max="85" step="1" value="45">
+          <div id="backgroundPreview" class="background-preview" aria-label="Pratonton background"><span>H4SX Gateway</span></div>
+          <p id="backgroundStatus" class="background-help" role="status" aria-live="polite"></p>
+        </div>
+        <div class="form-group">
           <label class="form-label">Tema Warna Custom</label>
           <div class="theme-preview-bar" id="themePreviewBar">PRATONTON LIVE</div>
           <div class="theme-picker-grid">
@@ -538,6 +630,20 @@
           </label>
         </div>
       </div>
+      <div class="form-group link-badge-editor">
+        <div class="switch-row">
+          <div><strong>Centang pada pautan ini</strong><small>Papar badge di sebelah tajuk pautan pilihan.</small></div>
+          <label class="switch"><input type="checkbox" id="linkVerified" aria-label="Aktifkan centang pautan"><span class="slider"></span></label>
+        </div>
+        <label class="form-label" for="linkVerifiedStyle">Gaya centang</label>
+        <select class="form-select" id="linkVerifiedStyle">
+          <option value="solid">Satu warna</option>
+          <option value="rainbow">Rainbow gradient bergerak 🌈</option>
+        </select>
+        <div class="link-badge-color-row"><label for="linkVerifiedColor">Warna centang</label><input type="color" id="linkVerifiedColor" value="#38bdf8"><output id="linkBadgeColorValue" for="linkVerifiedColor">#38BDF8</output></div>
+        <div class="link-badge-preview"><span id="linkBadgePreviewTitle">Website H4SX Market</span><span id="linkBadgePreview"></span></div>
+        <small class="feature-help">Pratonton sahaja. Tekan Simpan ke Firebase untuk terapkan pada pautan ini.</small>
+      </div>
       <div class="form-group">
         <label class="form-label">🗓️ Jadual Paparan (pilihan)</label>
         <div class="form-row">
@@ -652,7 +758,7 @@
 
 </div>
 
-<script src="app.js?v=secured-1-features-2"></script>
+<script defer src="app.js?v=secured-1-badge-6"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a"}' crossorigin="anonymous"></script>
 </body>
 </html>

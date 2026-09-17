@@ -8,7 +8,8 @@ const SECURITY_CONFIG = {
     '127.0.0.1',
     'h4sxmy.xyz',
     'www.h4sxmy.xyz',
-	'www.link.h4sxmy.xyz'
+    'link.h4sxmy.xyz',
+    'www.link.h4sxmy.xyz'
     // Add more domains as needed
   ],
   
@@ -22,7 +23,7 @@ const SECURITY_CONFIG = {
   FEATURES: {
     DOMAIN_CHECK: true,          // Enable domain whitelist check
     ANTI_COPYING: true,          // Disable right-click, copy, drag
-    ANTI_DEBUGGING: true,        // Detect developer tools
+    ANTI_DEBUGGING: false,       // Disabled: repeating debugger checks can freeze low-end devices
     OBFUSCATION: true,           // Basic code obfuscation
     INTEGRITY_CHECK: true,       // Script version validation
     LICENSE_VALIDATION: true,    // License key validation
