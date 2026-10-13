@@ -137,6 +137,7 @@
       backgroundUrl: '',
       backgroundType: 'auto',
       backgroundDim: 45,
+      backgroundBrightness: 100,
       socials: {
         whatsapp: '#',
         instagram: '#',
@@ -419,10 +420,12 @@
       else if(video.closest('.bg-img') || document.getElementById('adminModal').classList.contains('active')) video.play().catch(()=>{});
     });
   });
+  function backgroundBrightness(value){ const number=Number(value ?? 100); return Number.isFinite(number)?Math.max(50,Math.min(150,number)):100; }
   function cssImage(url){ return 'url(' + JSON.stringify(url) + ')'; }
   let backgroundRequest = 0;
   let appliedBackground;
   function applyBackground(){
+    document.documentElement.style.setProperty('--wallpaper-brightness', backgroundBrightness(appData.settings.backgroundBrightness)/100);
     const url = backgroundUrl(appData.settings.backgroundUrl) || '';
     document.documentElement.style.setProperty('--background-dim', backgroundDim(appData.settings.backgroundDim)/100);
     const type = wallpaperType(appData.settings.backgroundType, url);
@@ -456,11 +459,14 @@
     const url = backgroundUrl(raw);
     const preview = document.getElementById('backgroundPreview');
     const status = document.getElementById('backgroundStatus');
+    const brightness=backgroundBrightness(document.getElementById('backgroundBrightness').value);
+    preview.style.setProperty('--wallpaper-brightness',brightness/100);
+    document.getElementById('backgroundBrightnessValue').textContent=brightness+'%';
     const dim = backgroundDim(document.getElementById('backgroundDim').value);
     document.getElementById('backgroundDimValue').textContent = dim + '%';
     preview.style.setProperty('--background-dim', dim/100);
     removeWallpaperVideos(preview);
-    preview.style.backgroundImage = 'none';
+    preview.style.removeProperty('--wallpaper-preview-image');
     status.textContent = url === null ? 'Masukkan URL HTTPS yang sah.' : !url ? 'Background asal digunakan.' : 'Memuatkan pratonton…';
     if(!url) return;
     const type = wallpaperType(document.getElementById('backgroundType').value, url);
@@ -472,7 +478,7 @@
     const img = new Image();
     img.onload = ()=>{
       if(request !== previewRequest) return;
-      preview.style.backgroundImage = cssImage(url);
+      preview.style.setProperty('--wallpaper-preview-image',cssImage(url));
       status.textContent = 'Gambar berjaya dimuatkan. Tekan Simpan Tetapan untuk guna.';
     };
     img.onerror = ()=>{
@@ -509,8 +515,6 @@
     // Prioritize Firebase avatar, fallback to default if not set
     const avatarUrl = appData.profile.avatar || 'https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png';
     avatarImg.onload = ()=>{ avatarImg.style.display = ''; };
-    const introLogo = document.getElementById('introLogo');
-    if(introLogo && introLogo.getAttribute('src') !== avatarUrl) introLogo.src = avatarUrl;
     avatarImg.src = avatarUrl;
     logoBannerImg.src = avatarUrl;
     document.title = (appData.profile.name || 'H4SX Gateway') + ' | Official Links';
@@ -1340,6 +1344,7 @@
     document.getElementById('backgroundUrl').value = appData.settings.backgroundUrl || '';
     document.getElementById('backgroundType').value = ['auto','image','video','off'].includes(appData.settings.backgroundType) ? appData.settings.backgroundType : 'auto';
     document.getElementById('backgroundDim').value = backgroundDim(appData.settings.backgroundDim);
+    document.getElementById('backgroundBrightness').value = backgroundBrightness(appData.settings.backgroundBrightness);
     previewBackground();
   }
   function closeAdminModal(){ document.getElementById('adminModal').classList.remove('active'); removeWallpaperVideos(document.getElementById('backgroundPreview')); }
@@ -1683,7 +1688,7 @@
     const dialog=document.getElementById('promoDialog');
     const p=c.promo, identity=JSON.stringify(p);
     if(dialog.open && (dialog.dataset.campaign!==identity || !p.enabled)) dialog.close();
-    if(window.h4sxIntroActive || !p.enabled || !p.title || document.querySelector('.modal-overlay.active') || document.getElementById('voiceDialog').open || dialog.open) return;
+    if(!p.enabled || !p.title || document.querySelector('.modal-overlay.active') || document.getElementById('voiceDialog').open || dialog.open) return;
     const keyStore='h4sx_promo_'+identity;
     const seenIdentity=identity+(p.frequency==='daily'?malaysiaDay():'');
     let seen=promoShown.has(seenIdentity);
@@ -1847,7 +1852,7 @@
     const available=v.enabled&&validVoiceAudio(v.audio);
     button.hidden=!available;
     if(dialog.open && (!available||dialog.dataset.revision!==(v.revision||'initial')))dialog.close();
-    if(window.h4sxIntroActive||!available||dialog.open||document.querySelector('.modal-overlay.active')||document.getElementById('promoDialog').open)return;
+    if(!available||dialog.open||document.querySelector('.modal-overlay.active')||document.getElementById('promoDialog').open)return;
     let seen=voiceSeen.has(v.revision||'initial');
     try{seen=seen||sessionStorage.getItem('h4sx_voice_seen')===(v.revision||'initial');}catch(e){}
     if(!seen)openVoice(v);
@@ -2013,7 +2018,6 @@
     });
     initFeatures();
     initVoice();
-    window.addEventListener('h4sx:intro-dismissed', ()=>{ renderFeatures(); });
     initFirebase();
     let lastJoy = -1;
     document.getElementById('littleJoyButton').addEventListener('click', e=>{
@@ -2359,6 +2363,8 @@
 
     document.getElementById('backgroundPreviewBtn').addEventListener('click', previewBackground);
     document.getElementById('backgroundType').addEventListener('change', previewBackground);
+    document.getElementById('backgroundBrightness').addEventListener('input',()=>{const value=backgroundBrightness(document.getElementById('backgroundBrightness').value);document.getElementById('backgroundBrightnessValue').textContent=value+'%';document.getElementById('backgroundPreview').style.setProperty('--wallpaper-brightness',value/100);});
+    document.getElementById('backgroundLightingReset').addEventListener('click',()=>{document.getElementById('backgroundBrightness').value=100;document.getElementById('backgroundDim').value=45;document.getElementById('backgroundDimValue').textContent='45%';document.getElementById('backgroundBrightnessValue').textContent='100%';document.getElementById('backgroundPreview').style.setProperty('--wallpaper-brightness',1);document.getElementById('backgroundPreview').style.setProperty('--background-dim',.45);});
     document.getElementById('backgroundDim').addEventListener('input', ()=>{
       const dim = backgroundDim(document.getElementById('backgroundDim').value);
       document.getElementById('backgroundDimValue').textContent = dim + '%';
@@ -2367,12 +2373,13 @@
     document.getElementById('backgroundUrl').addEventListener('input', ()=>{
       ++previewRequest;
       removeWallpaperVideos(document.getElementById('backgroundPreview'));
-      document.getElementById('backgroundPreview').style.backgroundImage = 'none';
+      document.getElementById('backgroundPreview').style.removeProperty('--wallpaper-preview-image');
       document.getElementById('backgroundStatus').textContent = 'Tekan Pratonton untuk semak gambar.';
     });
     document.getElementById('backgroundResetBtn').addEventListener('click', ()=>{
       document.getElementById('backgroundUrl').value = '';
       document.getElementById('backgroundDim').value = 45;
+      document.getElementById('backgroundBrightness').value = 100;
       document.getElementById('backgroundType').value = 'auto';
       previewBackground();
     });
@@ -2394,6 +2401,7 @@
         designVersion: 3,
         backgroundUrl: url,
         backgroundType: document.getElementById('backgroundType').value,
+        backgroundBrightness: backgroundBrightness(document.getElementById('backgroundBrightness').value),
         backgroundDim: backgroundDim(document.getElementById('backgroundDim').value),
         theme: appData.settings.theme || 'dark',
         accentColor: accentC,

@@ -12,7 +12,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<link rel="stylesheet" href="style.css?v=secured-1-clean-gif-20261014">
+<link rel="stylesheet" href="style.css?v=secured-1-lighting-no-intro-20261014">
 </head>
 <body data-theme="dark" class="clean-gateway">
 
@@ -94,75 +94,6 @@
     <div class="redirect-footnote">OFFICIAL LINKS · H4SX</div>
   </div>
 </div>
-<!-- Loading -->
-<dialog class="loading-overlay intro-dialog" id="loadingOverlay" aria-labelledby="introTitle" aria-describedby="introStatus">
-  <div class="intro-ambient" aria-hidden="true"></div>
-  <button type="button" class="intro-close" id="introClose" aria-label="Tutup loading dan masuk website">✕</button>
-  <div class="intro-content">
-    <div class="intro-kicker">THE OFFICIAL EXPERIENCE</div>
-    <div class="intro-logo-wrap">
-      <div class="intro-orbit" aria-hidden="true"></div>
-      <div class="intro-logo-core"><span aria-hidden="true">H4<span>SX</span></span><img id="introLogo" src="https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png" alt="Logo H4SX"></div>
-      <span class="intro-spark" aria-hidden="true">✦</span>
-    </div>
-    <div class="intro-eyebrow">SELAMAT DATANG</div>
-    <h1 id="introTitle">H4SX <span>Gateway</span></h1>
-    <p class="intro-description">Satu tempat. Semua pautan pilihan anda.</p>
-    <div class="intro-progress" aria-hidden="true"><span></span></div>
-    <p id="introStatus" class="intro-status" role="status">Menyiapkan pengalaman anda</p>
-    <div class="intro-hint">Tekan ✕ untuk terus masuk</div>
-  </div>
-  <div class="intro-footer"><span>H4SX / OFFICIAL LINKS</span><span class="intro-footer-dot"></span><span>WELCOME IN</span></div>
-</dialog>
-<script>
-(() => {
-  const dialog = document.getElementById('loadingOverlay');
-  const close = document.getElementById('introClose');
-  const status = document.getElementById('introStatus');
-  const start = Date.now();
-  let done = false, finishTimer, safetyTimer, stageTimer;
-  window.h4sxIntroActive = true;
-  const cleanup = () => {
-    clearTimeout(finishTimer); clearTimeout(safetyTimer); clearTimeout(stageTimer);
-    window.removeEventListener('h4sx:data-ready', ready);
-    window.h4sxIntroActive = false;
-    document.body.classList.remove('intro-loading');
-    window.dispatchEvent(new Event('h4sx:intro-dismissed'));
-  };
-  function dismiss(immediate = false) {
-    if (done) return;
-    done = true;
-    clearTimeout(finishTimer); clearTimeout(safetyTimer); clearTimeout(stageTimer);
-    const end = () => { dialog.close(); dialog.hidden = true; cleanup(); };
-    if (immediate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) end();
-    else { dialog.classList.add('intro-leaving'); finishTimer = setTimeout(end, 320); }
-  }
-  function ready() {
-    if (done) return;
-    dialog.style.setProperty('--intro-progress', '100%');
-    status.textContent = 'Sedia untuk diterokai';
-    clearTimeout(stageTimer);
-    if (!finishTimer) finishTimer = setTimeout(() => dismiss(), Math.max(350, 1800 - (Date.now() - start)));
-  }
-  close.addEventListener('click', () => dismiss(true));
-  dialog.addEventListener('cancel', e => { e.preventDefault(); dismiss(true); });
-  dialog.addEventListener('close', () => { if (!done) { done = true; dialog.hidden = true; cleanup(); } });
-  const logo = document.getElementById('introLogo');
-  logo.onerror = () => { logo.hidden = true; };
-  logo.onload = () => { logo.hidden = false; };
-  window.addEventListener('h4sx:data-ready', ready);
-  try { dialog.showModal(); document.body.classList.add('intro-loading'); }
-  catch (e) { done = true; dialog.hidden = true; cleanup(); return; }
-  stageTimer = setTimeout(() => {
-    dialog.style.setProperty('--intro-progress', '72%');
-    status.textContent = 'Menyediakan pautan untuk anda';
-  }, 750);
-  // Keep the site accessible even if an external script or connection stalls.
-  safetyTimer = setTimeout(() => dismiss(), 6000);
-})();
-
-</script>
-
 <!-- SAKURA BACKGROUND -->
 <div class="bg-wrap" id="bgWrap">
   <div class="bg-img"></div>
@@ -511,6 +442,9 @@
             <button type="button" class="btn btn-secondary" id="backgroundPreviewBtn">Pratonton</button>
             <button type="button" class="btn btn-secondary" id="backgroundResetBtn">Reset Background</button>
           </div>
+          <label class="form-label" for="backgroundBrightness">Kecerahan wallpaper: <output id="backgroundBrightnessValue">100%</output></label>
+          <input id="backgroundBrightness" type="range" min="50" max="150" step="1" value="100">
+          <button id="backgroundLightingReset" type="button" class="btn btn-secondary">Reset cerah / gelap</button>
           <label class="form-label" for="backgroundDim">Gelapkan wallpaper: <output id="backgroundDimValue" for="backgroundDim">45%</output></label>
           <input type="range" id="backgroundDim" min="0" max="85" step="1" value="45">
           <div id="backgroundPreview" class="background-preview" aria-label="Pratonton background"><span>H4SX Gateway</span></div>
@@ -766,7 +700,7 @@
 
 </div>
 
-<script defer src="app.js?v=secured-1-clean-gif-20261014"></script>
+<script defer src="app.js?v=secured-1-lighting-no-intro-20261014"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a"}' crossorigin="anonymous"></script>
 </body>
 </html>
