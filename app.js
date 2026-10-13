@@ -631,55 +631,7 @@
   }
 
   // ──────────────────────────────────────────
-  // 🆕 LINK REDIRECT TRANSITION
-  // Instead of jumping straight out to the destination, show a short,
-  // cancellable "Membuka X..." screen — feels intentional/premium and
-  // gives misclicks an escape hatch. Click tracking + achievement credit
-  // only fire once the redirect actually completes (not on cancel).
-  // ──────────────────────────────────────────
-  const REDIRECT_DURATION = 1100;
-  let _redirectTimer = null;
-  let _redirectTarget = null;
-  let _redirectFocus = null;
-
-  function openRedirectOverlay(link){
-    let url;
-    try{
-      url = new URL(link.url);
-      if(!['https:', 'http:'].includes(url.protocol)) throw Error('Invalid protocol');
-    }catch(e){ showToast('Pautan tidak sah. Sila hubungi admin.', 'warning'); return; }
-    closeRedirectOverlay();
-    _redirectTarget = {...link, url: url.href};
-    _redirectFocus = document.activeElement;
-    const overlay = document.getElementById('redirectOverlay');
-    const icon = document.getElementById('redirectIcon');
-    icon.textContent = link.icon || '↗';
-    if(link.iconUrl){
-      const img = document.createElement('img');
-      img.alt = '';
-      img.onerror = ()=>{ icon.textContent = link.icon || '↗'; };
-      img.src = link.iconUrl;
-      icon.replaceChildren(img);
-    }
-    document.getElementById('redirectTitle').textContent = link.title || 'Pautan pilihan';
-    document.getElementById('redirectDomain').textContent = url.hostname;
-    document.getElementById('redirectStatus').textContent = 'Menyediakan destinasi';
-    document.getElementById('redirectSub').textContent = 'Pautan anda akan dibuka dalam tab baharu.';
-    const go = document.getElementById('redirectContinue');
-    go.href = url.href;
-    go.onclick = ()=>{
-      const target = _redirectTarget;
-      closeRedirectOverlay();
-      if(target) recordRedirectClick(target);
-    };
-    overlay.classList.remove('redirect-ready');
-    overlay.style.setProperty('--redirect-duration', REDIRECT_DURATION + 'ms');
-    overlay.classList.add('active');
-    overlay.setAttribute('aria-hidden', 'false');
-    document.getElementById('redirectCancelBtn').focus();
-    _redirectTimer = setTimeout(completeRedirect, REDIRECT_DURATION);
-  }
-
+  // Record clicks without delaying native link navigation.
   function recordRedirectClick(link){
     // Analytics must never prevent the destination from opening.
     try{
@@ -691,51 +643,6 @@
     }catch(e){ console.warn('Click tracking unavailable', e); }
     try{ trackLinkClickAchievement(link.id); }catch(e){ console.warn('Achievement tracking unavailable', e); }
   }
-
-  function completeRedirect(){
-    const link = _redirectTarget;
-    clearTimeout(_redirectTimer);
-    _redirectTimer = null;
-    if(!link) return;
-    let tab = null;
-    try{
-      tab = window.open('about:blank', '_blank');
-      if(tab){
-        tab.opener = null;
-        tab.location.replace(link.url);
-        closeRedirectOverlay();
-        recordRedirectClick(link);
-        return;
-      }
-    }catch(e){ try{ if(tab) tab.close(); }catch(ignore){} }
-    // A real anchor click retains user activation when popups are blocked.
-    const overlay = document.getElementById('redirectOverlay');
-    overlay.classList.add('redirect-ready');
-    document.getElementById('redirectStatus').textContent = 'Destinasi sedia';
-    document.getElementById('redirectSub').textContent = 'Tekan Buka sekarang untuk teruskan ke pautan anda.';
-    document.getElementById('redirectContinue').focus();
-  }
-
-  function closeRedirectOverlay(){
-    clearTimeout(_redirectTimer);
-    _redirectTimer = null;
-    _redirectTarget = null;
-    const overlay = document.getElementById('redirectOverlay');
-    if(overlay){
-      overlay.classList.remove('active', 'redirect-ready');
-      overlay.setAttribute('aria-hidden', 'true');
-    }
-    if(_redirectFocus && _redirectFocus.isConnected) _redirectFocus.focus();
-    _redirectFocus = null;
-  }
-
-  document.getElementById('redirectOverlay').addEventListener('keydown', e=>{
-    if(e.key !== 'Tab') return;
-    const first = document.getElementById('redirectContinue');
-    const last = document.getElementById('redirectCancelBtn');
-    if(e.shiftKey && document.activeElement === first){e.preventDefault();last.focus();}
-    else if(!e.shiftKey && document.activeElement === last){e.preventDefault();first.focus();}
-  });
 
   function gifCandidates(value){
     const url = backgroundUrl(value);
@@ -810,7 +717,7 @@
     }
 
     return `
-      <a class="link-btn${link.maintenance ? ' maintenance' : ''}${isPinned ? ' pinned' : ''}${link.customStyle ? ' custom-link-style' : ''}" href="${link.url}" target="_blank" data-id="${link.id}" data-maintenance="${!!link.maintenance}" style="animation-delay:${delay}s;${link.customStyle ? customLinkStyle(link) : ''}">
+      <a class="link-btn${link.maintenance ? ' maintenance' : ''}${isPinned ? ' pinned' : ''}${link.customStyle ? ' custom-link-style' : ''}" href="${link.url}" target="_blank" rel="noopener noreferrer" data-id="${link.id}" data-maintenance="${!!link.maintenance}" style="animation-delay:${delay}s;${link.customStyle ? customLinkStyle(link) : ''}">
         <div class="link-icon">${iconHtml}</div>
         <div class="link-text">
           <div class="link-title">${escapeHtml(link.title)}${linkBadgeHtml(link)}</div>
@@ -893,23 +800,19 @@
     
     container.querySelectorAll('.link-btn').forEach(btn=>{
       btn.addEventListener('click', function(e){
-        e.preventDefault();
         const id = this.dataset.id;
         const link = appData.links.find(l=>l.id===id);
-        if(!link) return;
+        if(!link){e.preventDefault();return;}
         if(link.maintenance){
+          e.preventDefault();
           showToast('🚧 "'+link.title+'" sedang dalam penyelenggaraan. Sila cuba sebentar lagi.', 'warning');
           return;
         }
-        // Tactile feedback right away, then the cancellable "Membuka X..."
-        // transition — actual navigation + click/achievement tracking
-        // happens in completeRedirect() only if it isn't cancelled.
-        createConfetti(e.clientX, e.clientY);
-        const ripple = document.createElement('div');
-        ripple.className = 'click-effect';
-        this.appendChild(ripple);
-        setTimeout(()=>ripple.remove(), 600);
-        openRedirectOverlay(link);
+        let url;
+        try{url=new URL(link.url);if(!['https:','http:'].includes(url.protocol))throw Error('Invalid protocol');}
+        catch(error){e.preventDefault();showToast('Pautan tidak sah. Sila hubungi admin.','warning');return;}
+        this.href=url.href;
+        recordRedirectClick(link);
       });
     });
   }
@@ -1025,19 +928,6 @@
     const div = document.createElement('div');
     div.textContent = str || '';
     return div.innerHTML;
-  }
-  
-  function createConfetti(x, y){
-    const existing = document.querySelectorAll('.confetti');
-    if(existing.length > 60) existing.forEach(c=>c.remove());
-    const colors = ['#ff6fb5','#ff85c2','#ffb6c1','#ffd1e8','#ff1493','#ff69b4'];
-    for(let i = 0; i < 15; i++){
-      const el = document.createElement('div');
-      el.className = 'confetti';
-      el.style.cssText = `left:${x}px;top:${y}px;background:${colors[i%colors.length]};transform:translateX(${(Math.random()-0.5)*200}px);animation-duration:${(Math.random()*1+2)}s`;
-      document.body.appendChild(el);
-      setTimeout(()=>el.remove(), 3000);
-    }
   }
   
   // ──────────────────────────────────────────
@@ -1179,10 +1069,6 @@
     achvState.unlocked[id] = Date.now();
     saveAchvState();
     showToast('🏆 Badge Baru: ' + def.name + '!', 'achievement');
-    try{
-      createConfetti(window.innerWidth/2, window.innerHeight/2.5);
-      setTimeout(()=>createConfetti(window.innerWidth/2, window.innerHeight/2.5), 200);
-    }catch(e){}
     updateAchvUI();
   }
 
@@ -2065,8 +1951,6 @@
       void message.offsetWidth;
       if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
         message.classList.add('joy-reveal');
-        const rect = e.currentTarget.getBoundingClientRect();
-        createConfetti(rect.left+rect.width/2,rect.top+rect.height/2);
       }
     });
     initSideWidgets();
@@ -2193,15 +2077,6 @@
     document.getElementById('closeAchvModal').addEventListener('click', ()=>{ document.getElementById('achvModal').classList.remove('active'); });
     document.getElementById('achvModal').addEventListener('click', (e)=>{ if(e.target.id === 'achvModal') document.getElementById('achvModal').classList.remove('active'); });
 
-    // 🆕 Link redirect transition — cancel button + click outside to abort
-    document.getElementById('redirectCancelBtn').addEventListener('click', closeRedirectOverlay);
-    document.getElementById('redirectOverlay').addEventListener('click', (e)=>{
-      if(e.target.id === 'redirectOverlay') closeRedirectOverlay();
-    });
-    document.addEventListener('keydown', (e)=>{
-      if(e.key === 'Escape' && document.getElementById('redirectOverlay').classList.contains('active')) closeRedirectOverlay();
-    });
-    
     document.querySelectorAll('.tab-btn-modal').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         document.querySelectorAll('.tab-btn-modal').forEach(b=>b.classList.remove('active'));

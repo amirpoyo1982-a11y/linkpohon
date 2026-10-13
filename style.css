@@ -422,40 +422,6 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 .sync-bar.done{width:100%;opacity:0;animation:none;transition:width 0.3s ease,opacity 0.5s ease 0.25s}
 @keyframes syncPulse{0%,100%{opacity:0.7}50%{opacity:1}}
 
-/* ===== LINK REDIRECT TRANSITION ===== */
-.redirect-overlay{
-  position:fixed;inset:0;z-index:10001;
-  background:rgba(8,4,10,0.78);
-  backdrop-filter:blur(var(--blur-16));-webkit-backdrop-filter:blur(var(--blur-16));
-  display:flex;align-items:center;justify-content:center;
-  opacity:0;visibility:hidden;transition:opacity 0.3s ease,visibility 0.3s ease;
-}
-.redirect-overlay.active{opacity:1;visibility:visible}
-.redirect-card{
-  background:var(--card-solid);border:1px solid var(--border);border-radius:24px;
-  padding:36px 32px 28px;text-align:center;max-width:300px;width:calc(100% - 40px);
-  box-shadow:0 30px 80px rgba(0,0,0,0.5);
-  transform:translateY(18px) scale(0.92);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
-}
-.redirect-overlay.active .redirect-card{transform:translateY(0) scale(1)}
-.redirect-icon-wrap{position:relative;width:96px;height:96px;margin:0 auto 20px}
-.redirect-icon{
-  position:absolute;inset:8px;display:flex;align-items:center;justify-content:center;
-  font-size:38px;border-radius:50%;background:var(--card);overflow:hidden;
-  animation:redirectBounce 1s ease-in-out infinite;
-}
-.redirect-icon img{width:100%;height:100%;object-fit:cover}
-.redirect-ring{position:absolute;inset:0;transform:rotate(-90deg)}
-.redirect-ring-bg{fill:none;stroke:var(--border);stroke-width:5}
-.redirect-ring-fg{
-  fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round;
-  stroke-dasharray:283;stroke-dashoffset:283;
-}
-.redirect-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:6px;color:var(--text);word-break:break-word}
-.redirect-sub{font-size:12px;color:var(--muted);margin-bottom:22px}
-.redirect-cancel{width:100%}
-@keyframes redirectBounce{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
-
 /* ===== SOCIAL ROW ===== */
 .social-row{display:flex;justify-content:center;gap:12px;margin-top:28px;opacity:0;animation:fadeUp 0.6s ease 0.8s forwards;flex-wrap:wrap}
 .social-btn{
@@ -828,8 +794,6 @@ body{font-family:'Archivo',sans-serif;color:var(--text);background:var(--bg);ove
 .qr-caption{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;text-align:center}
 
 /* ===== CONFETTI ===== */
-.confetti{position:fixed;width:10px;height:10px;background:var(--accent);pointer-events:none;z-index:9999;animation:confettiFall 3s ease-out forwards;}
-@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
 
 .firebase-setup-notice{padding:20px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:16px;text-align:center;margin:20px auto;max-width:440px;}
 .firebase-setup-notice h3{color:var(--danger);margin:0 0 8px;font-family:'Syne',sans-serif}
@@ -1054,33 +1018,6 @@ body.has-custom-background .bg-overlay{background:rgba(0,0,0,var(--background-di
 .background-preview{position:relative;isolation:isolate;display:grid;place-items:center;min-height:150px;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--bg) center/cover no-repeat}
 .background-preview::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,var(--background-dim,.45));z-index:-1}
 .background-preview span{color:white;text-shadow:0 1px 6px #000;font-weight:700}
-
-/* Premium redirect transition */
-.redirect-overlay{padding:20px;background:rgba(5,7,12,.8);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-.redirect-card{position:relative;isolation:isolate;overflow:hidden;box-sizing:border-box;width:100%;max-width:390px;max-height:calc(100dvh - 40px);overflow-y:auto;padding:26px 28px 20px;border-radius:28px;border:1px solid #dac39a35;background:radial-gradient(ellipse at 50% 0,#c7ab7224,transparent 58%),linear-gradient(155deg,#1b1d25,#101118 75%);box-shadow:0 32px 100px #0009,inset 0 1px #ffffff12;color:#f5f2ed;transform:translateY(12px) scale(.97)}
-.redirect-card::before{content:'';position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,#efd5a4,transparent)}
-.redirect-brand{display:flex;align-items:center;justify-content:center;gap:9px;font:600 10px 'Archivo',sans-serif;letter-spacing:2.6px;color:#c6bba8;margin-bottom:26px}
-.redirect-brand>span:not(.redirect-brand-dot){color:#655f56}.redirect-brand-dot{width:5px;height:5px;border-radius:50%;background:#e5c48b;box-shadow:0 0 12px #e5c48788}
-.redirect-icon-wrap{width:98px;height:98px;margin:0 auto 24px}
-.redirect-icon{inset:9px;border:1px solid #f2d7a343;border-radius:24px;background:#21232c;animation:none;font:36px 'Archivo',sans-serif;box-shadow:0 12px 30px #0006}
-.redirect-icon img{display:block}.redirect-orbit{position:absolute;inset:0;border:1px solid #e6c78c26;border-top-color:#e6c78c;border-right-color:#e6c78c80;border-radius:32px;transform:rotate(0);animation:redirectOrbit 2.5s linear infinite}
-.redirect-arrow{position:absolute;right:0;bottom:0;display:grid;place-items:center;width:28px;height:28px;border:3px solid #191a22;border-radius:50%;background:#e5c795;color:#25201a;font:700 15px 'Archivo',sans-serif}
-.redirect-eyebrow{font:600 10px 'Archivo',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#ddc59e;margin-bottom:10px}
-.redirect-title{font:600 clamp(20px,5vw,26px)/1.3 'Archivo',sans-serif;letter-spacing:-.6px;color:#f8f6f1;margin:0 0 12px;overflow-wrap:anywhere}
-.redirect-domain{display:inline-flex;align-items:center;gap:8px;max-width:100%;box-sizing:border-box;padding:7px 12px;border:1px solid #ffffff12;border-radius:999px;background:#ffffff05;font:12px/1.4 'Archivo',sans-serif;color:#b9bbc6;overflow-wrap:anywhere}.redirect-domain>span:last-child{min-width:0}
-.redirect-progress{height:3px;border-radius:5px;background:#ffffff0c;overflow:hidden;margin:24px 0 13px}.redirect-progress span{display:block;height:100%;width:100%;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,#ac8651,#f2dfba);border-radius:inherit}
-.redirect-overlay.active .redirect-progress span{animation:redirectProgress var(--redirect-duration,1100ms) linear forwards}
-.redirect-sub{min-height:36px;margin:0 0 18px;font:12px/1.6 'Archivo',sans-serif;color:#a6a7b2}
-.redirect-continue{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 17px;background:linear-gradient(115deg,#ebd4ac,#cbaa75);border:1px solid #f8e5c7;border-radius:12px;color:#241e16;text-decoration:none;font:700 13px 'Archivo',sans-serif;cursor:pointer;box-shadow:0 6px 22px #d2b58012;transition:filter .2s,transform .2s}
-.redirect-continue:hover{filter:brightness(1.08);transform:translateY(-1px)}
-.redirect-cancel{display:block;width:100%;margin:9px 0 0;padding:11px;border:1px solid transparent;border-radius:10px;background:transparent;color:#b9b9c3;font:500 12px 'Archivo',sans-serif;cursor:pointer}.redirect-cancel:hover{background:#ffffff08;color:white}
-.redirect-continue:focus-visible,.redirect-cancel:focus-visible{outline:2px solid #f2d9ae;outline-offset:3px}
-.redirect-footnote{margin-top:17px;padding-top:16px;border-top:1px solid #ffffff0b;color:#747681;font:500 9px 'Archivo',sans-serif;letter-spacing:2px}
-.redirect-ready .redirect-orbit{animation:none;border-color:#e6c78c80}.redirect-overlay.redirect-ready .redirect-progress span{animation:none;transform:scaleX(1)}
-@keyframes redirectOrbit{to{transform:rotate(360deg)}}
-@keyframes redirectProgress{to{transform:scaleX(1)}}
-@media(prefers-reduced-motion:reduce){.redirect-orbit,.redirect-overlay.active .redirect-progress span{animation:none}.redirect-overlay.active .redirect-progress span{transform:scaleX(1)}.redirect-card,.redirect-overlay,.redirect-continue{transition:none}}
-@media(max-width:380px){.redirect-card{padding:23px 21px 18px}.redirect-brand{margin-bottom:20px}}
 
 /* Maintenance ribbon: keep the image and title unobstructed. */
 .link-btn.maintenance{padding-bottom:54px;border-color:rgba(220,181,110,.4);box-shadow:0 8px 28px #0002}
