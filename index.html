@@ -12,7 +12,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<link rel="stylesheet" href="style.css?v=secured-1-live-profile-logo-20261014">
+<link rel="stylesheet" href="style.css?v=secured-1-custom-cursor-20261014">
 </head>
 <body data-theme="dark" class="clean-gateway">
 
@@ -73,7 +73,6 @@
 
 <div style="position:relative;min-height:100%;">
 <!-- Scroll Progress -->
-<div class="scroll-progress" id="scrollProgress"></div>
 
 <!-- Redirect transition overlay — shown when a visitor taps a link -->
 <div class="redirect-overlay" id="redirectOverlay" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="redirectTitle" aria-describedby="redirectSub">
@@ -433,6 +432,12 @@
       <!-- TAB: SETTINGS -->
       <div id="tab-settings" class="tab-content" style="display:none">
         <div class="form-group">
+          <label class="form-label" for="cursorType">Custom cursor (PC)</label>
+          <select id="cursorType" class="form-input"><option value="default">Cursor asal</option><option value="custom">Gambar custom melalui link</option><option value="crosshair">Crosshair</option><option value="cell">Cell</option><option value="grab">Grab</option></select>
+          <input id="cursorUrl" class="form-input" type="url" placeholder="https://contoh.com/cursor.png">
+          <small>Guna link terus PNG atau CUR, disarankan 32 × 32 px. Cursor custom untuk mouse di PC.</small>
+          <div id="cursorPreview" class="cursor-preview">Gerakkan mouse dalam kotak ini untuk cuba cursor.</div>
+          <button id="resetCursorBtn" type="button" class="btn btn-secondary">Reset cursor</button>
           <label class="form-label"><input id="profileOverlayEnabled" type="checkbox" checked> Kotak custom belakang profil</label>
           <label class="form-label" for="profileOverlayOpacity">Ketebalan warna: <output id="profileOverlayOpacityValue">55%</output></label>
           <input id="profileOverlayOpacity" type="range" min="0" max="100" step="1" value="55">
@@ -706,7 +711,7 @@
 
 </div>
 
-<script defer src="app.js?v=secured-1-live-profile-logo-20261014"></script>
+<script defer src="app.js?v=secured-1-custom-cursor-20261014"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a"}' crossorigin="anonymous"></script>
 </body>
 </html>

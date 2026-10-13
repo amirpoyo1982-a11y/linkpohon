@@ -493,7 +493,11 @@
   function profileOverlayOpacity(value){const n=Number(value ?? 55);return Number.isFinite(n)?Math.max(0,Math.min(100,n)):55;}
   function applyProfileOverlay(settings){document.body.classList.toggle('has-profile-overlay',settings.profileOverlayEnabled!==false);document.documentElement.style.setProperty('--profile-overlay-opacity',profileOverlayOpacity(settings.profileOverlayOpacity)/100);const c=normalizeHex(settings.profileOverlayColor)||'#000000';document.documentElement.style.setProperty('--profile-overlay-rgb',[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)).join(','));document.documentElement.style.setProperty('--profile-overlay-text',normalizeHex(settings.profileOverlayTextColor)||'#f5f4fa');}
   function previewProfileOverlay(){const settings={profileOverlayEnabled:document.getElementById('profileOverlayEnabled').checked,profileOverlayOpacity:profileOverlayOpacity(document.getElementById('profileOverlayOpacity').value),profileOverlayColor:document.getElementById('profileOverlayColor').value,profileOverlayTextColor:document.getElementById('profileOverlayTextColor').value};applyProfileOverlay(settings);document.getElementById('profileOverlayOpacityValue').textContent=settings.profileOverlayOpacity+'%';const preview=document.getElementById('profileOverlayPreview');preview.style.background=settings.profileOverlayEnabled?settings.profileOverlayColor+Math.round(settings.profileOverlayOpacity*2.55).toString(16).padStart(2,'0'):'transparent';preview.style.color=settings.profileOverlayTextColor;}
+  function customCursorValue(settings){const type=settings.cursorType||'default';if(type==='custom'){const url=backgroundUrl(settings.cursorUrl);return url?'url('+JSON.stringify(url)+') 0 0, auto':'auto';}return ['crosshair','cell','grab'].includes(type)?type:'auto';}
+  function applyCustomCursor(settings){const value=customCursorValue(settings);document.body.classList.toggle('has-custom-cursor',value!=='auto');document.documentElement.style.setProperty('--custom-cursor',value);}
+  function previewCustomCursor(){const type=document.getElementById('cursorType').value;const input=document.getElementById('cursorUrl');input.disabled=type!=='custom';document.getElementById('cursorPreview').style.cursor=customCursorValue({cursorType:type,cursorUrl:input.value});}
   function applyTheme(){
+    applyCustomCursor(appData.settings);
     applyProfileOverlay(appData.settings);
     applyBackground();
     document.body.setAttribute('data-theme', appData.settings.theme);
@@ -1357,6 +1361,8 @@
     document.getElementById('socialTT').value = appData.settings.socials.tiktok || '';
     document.getElementById('socialYT').value = appData.settings.socials.youtube || '';
     populateThemePicker();
+    document.getElementById('cursorType').value=['default','custom','crosshair','cell','grab'].includes(appData.settings.cursorType)?appData.settings.cursorType:'default';
+    document.getElementById('cursorUrl').value=appData.settings.cursorUrl||'';previewCustomCursor();
     document.getElementById('backgroundUrl').value = appData.settings.backgroundUrl || '';
     document.getElementById('backgroundType').value = ['auto','image','video','off'].includes(appData.settings.backgroundType) ? appData.settings.backgroundType : 'auto';
     document.getElementById('backgroundDim').value = backgroundDim(appData.settings.backgroundDim);
@@ -2064,19 +2070,6 @@
       else{ resumeMusic(); }
     });
     
-    let _scrollTicking = false;
-    window.addEventListener('scroll', ()=>{
-      if(_scrollTicking) return;
-      _scrollTicking = true;
-      requestAnimationFrame(()=>{
-        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-        const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-        const scrollPercent = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
-        document.getElementById('scrollProgress').style.width = scrollPercent + '%';
-        _scrollTicking = false;
-      });
-    }, { passive: true });
-    
     document.getElementById('loginBtn').addEventListener('click', ()=>{
       if(currentUser){
         if(confirm('Log keluar dari admin?')){
@@ -2405,10 +2398,14 @@
       document.getElementById('backgroundType').value = 'auto';
       previewBackground();
     });
+    ['cursorType','cursorUrl'].forEach(id=>document.getElementById(id).addEventListener('input',previewCustomCursor));
+    document.getElementById('resetCursorBtn').addEventListener('click',()=>{document.getElementById('cursorType').value='default';document.getElementById('cursorUrl').value='';previewCustomCursor();});
     document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
       if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
       const url = backgroundUrl(document.getElementById('backgroundUrl').value);
       if(url === null){ showToast('URL background mesti guna HTTPS.', 'warning'); return; }
+      const cursorUrl=backgroundUrl(document.getElementById('cursorUrl').value);
+      if(document.getElementById('cursorType').value==='custom'&&!cursorUrl){showToast('Masukkan link HTTPS gambar cursor yang sah.','warning');return;}
       const gradA    = normalizeHex(document.getElementById('hexGradA').value)   || appData.settings.gradientA   || '#ff6fb5';
       const gradB    = normalizeHex(document.getElementById('hexGradB').value)   || appData.settings.gradientB   || '#ba55d3';
       const accentC  = normalizeHex(document.getElementById('hexAccent').value)  || appData.settings.accentColor || '#ff6fb5';
@@ -2421,6 +2418,8 @@
       const newSettings = {
         ...appData.settings,
         designVersion: 3,
+        cursorType:document.getElementById("cursorType").value,
+        cursorUrl:cursorUrl||"",
         backgroundUrl: url,
         backgroundType: document.getElementById('backgroundType').value,
         profileOverlayEnabled:document.getElementById('profileOverlayEnabled').checked,
