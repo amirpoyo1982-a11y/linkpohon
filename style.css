@@ -1169,3 +1169,8 @@ body.has-custom-background .bg-img{filter:brightness(var(--wallpaper-brightness,
 #backgroundBrightness{width:100%;accent-color:var(--accent);margin:8px 0 14px}
 .background-preview::after{content:"";position:absolute;inset:0;z-index:-2;background-image:var(--wallpaper-preview-image,none);background-position:center;background-size:cover;filter:brightness(var(--wallpaper-brightness,1))}
 .background-preview .custom-wallpaper-video{filter:brightness(var(--wallpaper-brightness,1))}
+
+body.clean-gateway.has-profile-overlay .profile-card{background:rgba(0,0,0,var(--profile-overlay-opacity,.55))!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:22px;padding:24px 18px!important}
+body.clean-gateway.has-profile-overlay .profile-card :is(.name,.handle,.bio,.location-badge){color:#f5f4fa;-webkit-text-fill-color:currentColor}
+#profileOverlayOpacity{width:100%;accent-color:var(--accent);margin:8px 0 14px}
+.profile-overlay-preview{border-radius:14px;padding:18px;margin:14px 0;color:#fff;border:1px solid #ffffff22;text-align:center}

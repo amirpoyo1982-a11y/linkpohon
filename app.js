@@ -138,6 +138,8 @@
       backgroundType: 'auto',
       backgroundDim: 45,
       backgroundBrightness: 100,
+      profileOverlayEnabled: true,
+      profileOverlayOpacity: 55,
       socials: {
         whatsapp: '#',
         instagram: '#',
@@ -486,7 +488,11 @@
     };
     img.src = url;
   }
+  function profileOverlayOpacity(value){const n=Number(value ?? 55);return Number.isFinite(n)?Math.max(0,Math.min(100,n)):55;}
+  function applyProfileOverlay(settings){document.body.classList.toggle('has-profile-overlay',settings.profileOverlayEnabled!==false);document.documentElement.style.setProperty('--profile-overlay-opacity',profileOverlayOpacity(settings.profileOverlayOpacity)/100);}
+  function previewProfileOverlay(){const settings={profileOverlayEnabled:document.getElementById('profileOverlayEnabled').checked,profileOverlayOpacity:profileOverlayOpacity(document.getElementById('profileOverlayOpacity').value)};applyProfileOverlay(settings);document.getElementById('profileOverlayOpacityValue').textContent=settings.profileOverlayOpacity+'%';const preview=document.getElementById('profileOverlayPreview');preview.style.background=settings.profileOverlayEnabled?'rgba(0,0,0,'+settings.profileOverlayOpacity/100+')':'transparent';}
   function applyTheme(){
+    applyProfileOverlay(appData.settings);
     applyBackground();
     document.body.setAttribute('data-theme', appData.settings.theme);
     const {gradA,gradB,accentC}=displayPalette();
@@ -1345,9 +1351,12 @@
     document.getElementById('backgroundType').value = ['auto','image','video','off'].includes(appData.settings.backgroundType) ? appData.settings.backgroundType : 'auto';
     document.getElementById('backgroundDim').value = backgroundDim(appData.settings.backgroundDim);
     document.getElementById('backgroundBrightness').value = backgroundBrightness(appData.settings.backgroundBrightness);
+    document.getElementById('profileOverlayEnabled').checked=appData.settings.profileOverlayEnabled!==false;
+    document.getElementById('profileOverlayOpacity').value=profileOverlayOpacity(appData.settings.profileOverlayOpacity);
+    previewProfileOverlay();
     previewBackground();
   }
-  function closeAdminModal(){ document.getElementById('adminModal').classList.remove('active'); removeWallpaperVideos(document.getElementById('backgroundPreview')); }
+  function closeAdminModal(){ applyProfileOverlay(appData.settings); document.getElementById('adminModal').classList.remove('active'); removeWallpaperVideos(document.getElementById('backgroundPreview')); }
   function openLinkModal(isEdit=false){
     document.getElementById('linkModal').classList.add('active');
     document.getElementById('linkModalTitle').textContent = isEdit ? 'Edit Pautan' : 'Tambah Pautan Baru';
@@ -2361,6 +2370,8 @@
       });
     });
 
+    ['profileOverlayEnabled','profileOverlayOpacity'].forEach(id=>document.getElementById(id).addEventListener('input',previewProfileOverlay));
+    document.getElementById('profileOverlayReset').addEventListener('click',()=>{document.getElementById('profileOverlayEnabled').checked=true;document.getElementById('profileOverlayOpacity').value=55;previewProfileOverlay();});
     document.getElementById('backgroundPreviewBtn').addEventListener('click', previewBackground);
     document.getElementById('backgroundType').addEventListener('change', previewBackground);
     document.getElementById('backgroundBrightness').addEventListener('input',()=>{const value=backgroundBrightness(document.getElementById('backgroundBrightness').value);document.getElementById('backgroundBrightnessValue').textContent=value+'%';document.getElementById('backgroundPreview').style.setProperty('--wallpaper-brightness',value/100);});
@@ -2401,6 +2412,8 @@
         designVersion: 3,
         backgroundUrl: url,
         backgroundType: document.getElementById('backgroundType').value,
+        profileOverlayEnabled:document.getElementById('profileOverlayEnabled').checked,
+        profileOverlayOpacity:profileOverlayOpacity(document.getElementById('profileOverlayOpacity').value),
         backgroundBrightness: backgroundBrightness(document.getElementById('backgroundBrightness').value),
         backgroundDim: backgroundDim(document.getElementById('backgroundDim').value),
         theme: appData.settings.theme || 'dark',
