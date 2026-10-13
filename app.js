@@ -509,11 +509,14 @@
     document.documentElement.style.setProperty('--grad-b-rgb', hexToRgbStr(gradB));
   }
   
+  function profileBadgeSize(value){const n=Number(value??22);return Number.isFinite(n)?Math.max(10,Math.min(64,n)):22;}
+  function previewProfileBadge(){const size=profileBadgeSize(document.getElementById('editProfileBadgeSize').value);const preview=document.getElementById('profileBadgeGifPreview');const original=document.querySelector('#profileName .verified-badge');preview.innerHTML=gifMarkup(document.getElementById('editProfileBadgeGif').value)||(original.dataset.original||original.innerHTML);preview.style.setProperty('--profile-badge-size',size+'px');document.getElementById('profileBadgeSizeValue').textContent=size+'px';}
   function renderProfile(){
     const nameEl = document.getElementById('profileName');
     const badgeEl = nameEl.querySelector('.verified-badge');
     if(!badgeEl.dataset.original) badgeEl.dataset.original=badgeEl.innerHTML;
     badgeEl.innerHTML=gifMarkup(appData.profile.badgeGif)||badgeEl.dataset.original;
+    badgeEl.style.setProperty("--profile-badge-size",profileBadgeSize(appData.profile.badgeSize)+"px");
     nameEl.childNodes[0].nodeType === 3
       ? (nameEl.childNodes[0].textContent = (appData.profile.name || 'H4SX Gateway') + ' ')
       : nameEl.insertBefore(document.createTextNode((appData.profile.name || 'H4SX Gateway') + ' '), badgeEl);
@@ -1338,7 +1341,8 @@
     renderAdminLinkList();
     renderAdminMusicList();
     document.getElementById('editProfileBadgeGif').value=appData.profile.badgeGif||'';
-    document.getElementById('profileBadgeGifPreview').innerHTML=gifMarkup(appData.profile.badgeGif);
+    document.getElementById('editProfileBadgeSize').value=profileBadgeSize(appData.profile.badgeSize);
+    previewProfileBadge();
     document.getElementById('editName').value = appData.profile.name;
     document.getElementById('editHandle').value = appData.profile.handle;
     document.getElementById('editBio').value = appData.profile.bio;
@@ -2285,7 +2289,8 @@
     
     ['linkVerified','linkVerifiedStyle','linkVerifiedColor','linkVerifiedGif','linkTitle'].forEach(id=>document.getElementById(id).addEventListener('input',updateLinkBadgePreview));
     ['linkCustomStyle','linkCardColor','linkTextColor','linkBorderColor','linkCardOpacity','linkTitle'].forEach(id=>document.getElementById(id).addEventListener('input',previewLinkStyle));
-    document.getElementById('editProfileBadgeGif').addEventListener('input',()=>{document.getElementById('profileBadgeGifPreview').innerHTML=gifMarkup(document.getElementById('editProfileBadgeGif').value);});
+    ['editProfileBadgeGif','editProfileBadgeSize'].forEach(id=>document.getElementById(id).addEventListener('input',previewProfileBadge));
+    document.getElementById('resetProfileBadgeSize').addEventListener('click',()=>{document.getElementById('editProfileBadgeSize').value=22;previewProfileBadge();});
     document.getElementById('saveLinkBtn').addEventListener('click', ()=>{
       if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
       const title = document.getElementById('linkTitle').value.trim();
@@ -2327,7 +2332,7 @@
       const badgeGif=document.getElementById('editProfileBadgeGif').value.trim();
       if(badgeGif&&!gifCandidates(badgeGif).length){showToast('GIF profil mesti guna link HTTPS yang sah.','warning');return;}
       if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
-      const profileData = { ...appData.profile,badgeGif,
+      const profileData = { ...appData.profile,badgeGif,badgeSize:profileBadgeSize(document.getElementById("editProfileBadgeSize").value),
         name: document.getElementById('editName').value.trim() || 'H4SX Gateway',
         handle: document.getElementById('editHandle').value.trim() || '@h4sx',
         bio: document.getElementById('editBio').value.trim(),
