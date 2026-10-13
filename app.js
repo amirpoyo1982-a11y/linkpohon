@@ -136,6 +136,7 @@
       theme: 'dark',
       backgroundUrl: '',
       backgroundType: 'auto',
+      mobilePerformance: 'auto',
       backgroundDim: 45,
       backgroundBrightness: 100,
       profileOverlayEnabled: true,
@@ -398,6 +399,10 @@
     if(mode === 'video' || mode === 'image') return mode;
     return /\.(mp4|webm)$/i.test(new URL(url).pathname) ? 'video' : 'image';
   }
+  function mediaVisible(video){const r=video.getBoundingClientRect();return !document.hidden&&video.isConnected&&r.width>0&&r.height>0&&r.bottom>0&&r.top<window.innerHeight&&r.right>0&&r.left<window.innerWidth;}
+  function syncDecorativeVideo(video){if(mediaVisible(video))video.play().catch(()=>{});else video.pause();}
+  function observeDecorativeVideo(video){if(typeof IntersectionObserver==='undefined'){syncDecorativeVideo(video);return null;}const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting)syncDecorativeVideo(entry.target);else entry.target.pause();}));observer.observe(video);return observer;}
+  document.addEventListener('visibilitychange',()=>{document.body.classList.toggle('page-hidden',document.hidden);document.querySelectorAll('video.custom-wallpaper-video,.profile-live-logo,.profile-live-avatar').forEach(syncDecorativeVideo);});
   let wallpaperObserver;
   function removeWallpaperVideos(container){
     container.querySelectorAll('video.custom-wallpaper-video').forEach(video=>{ wallpaperObserver?.unobserve(video); video.pause(); video.removeAttribute('src'); video.load(); video.remove(); });
@@ -410,20 +415,12 @@
     video.addEventListener('loadeddata', onReady, {once:true});
     video.addEventListener('error', onError, {once:true});
     container.appendChild(video); video.src = url;
-    if(typeof IntersectionObserver !== 'undefined'){
-      if(!wallpaperObserver) wallpaperObserver = new IntersectionObserver(entries=>entries.forEach(entry=>{
-        if(entry.isIntersecting && !document.hidden) entry.target.play().catch(()=>{}); else entry.target.pause();
-      }));
+    if(typeof IntersectionObserver!=='undefined'){
+      if(!wallpaperObserver)wallpaperObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting)syncDecorativeVideo(entry.target);else entry.target.pause();}));
       wallpaperObserver.observe(video);
-    } else if(!document.hidden) video.play().catch(()=>{});
+    }else syncDecorativeVideo(video);
     return video;
   }
-  document.addEventListener('visibilitychange', ()=>{
-    document.querySelectorAll('video.custom-wallpaper-video').forEach(video=>{
-      if(document.hidden) video.pause();
-      else if(video.closest('.bg-img') || document.getElementById('adminModal').classList.contains('active')) video.play().catch(()=>{});
-    });
-  });
   function backgroundBrightness(value){ const number=Number(value ?? 100); return Number.isFinite(number)?Math.max(50,Math.min(150,number)):100; }
   function cssImage(url){ return 'url(' + JSON.stringify(url) + ')'; }
   let backgroundRequest = 0;
@@ -497,6 +494,7 @@
   function applyCustomCursor(settings){const value=customCursorValue(settings);document.body.classList.toggle('has-custom-cursor',value!=='auto');document.documentElement.style.setProperty('--custom-cursor',value);}
   function previewCustomCursor(){const type=document.getElementById('cursorType').value;const input=document.getElementById('cursorUrl');input.disabled=type!=='custom';document.getElementById('cursorPreview').style.cursor=customCursorValue({cursorType:type,cursorUrl:input.value});}
   function applyTheme(){
+    applyMobilePerformance();
     applyCustomCursor(appData.settings);
     applyProfileOverlay(appData.settings);
     applyBackground();
@@ -515,18 +513,17 @@
   
   const badgeVideoObservers=new WeakMap();
   function renderAvatarMedia(image,value){
-    const parent=image.parentElement;parent.querySelectorAll('video.profile-live-avatar').forEach(v=>{badgeVideoObservers.get(v)?.disconnect();v.pause();v.removeAttribute('src');v.load();v.remove();});
+    const parent=image.parentElement;const mediaKey=backgroundUrl(value)||'default';if(image.dataset.mediaKey===mediaKey)return;image.dataset.mediaKey=mediaKey;parent.querySelectorAll('video.profile-live-avatar').forEach(v=>{badgeVideoObservers.get(v)?.disconnect();v.pause();v.removeAttribute('src');v.load();v.remove();});
     const fallback='https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png';const url=backgroundUrl(value)||fallback;image.style.display='block';image.referrerPolicy='no-referrer';
     if(wallpaperType('auto',url)==='video'){
       image.onload=null;image.onerror=null;image.src=fallback;image.style.display='none';const video=document.createElement('video');video.className='profile-live-avatar';video.muted=true;video.defaultMuted=true;video.loop=true;video.playsInline=true;video.preload='metadata';video.setAttribute('aria-label','Logo profil live');video.src=url;video.addEventListener('error',()=>{badgeVideoObservers.get(video)?.disconnect();video.pause();video.remove();image.style.display='block';if(image.id==='avatarPreviewImg')document.getElementById('avatarPreviewStatus').textContent='Video tidak boleh dimuatkan. Semak link MP4/WebM.';});video.addEventListener('loadeddata',()=>{if(image.id==='avatarPreviewImg')document.getElementById('avatarPreviewStatus').textContent='Video profil berjaya dimuatkan.';});parent.insertBefore(video,image);
-      if(typeof IntersectionObserver!=='undefined'){const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting&&!document.hidden)video.play().catch(()=>{});else video.pause();}));observer.observe(video);badgeVideoObservers.set(video,observer);}else video.play().catch(()=>{});
+      const observer=observeDecorativeVideo(video);if(observer)badgeVideoObservers.set(video,observer);
     }else{
       const candidates=gifCandidates(value);let index=0;image.onload=()=>{image.style.display='block';if(image.id==='avatarPreviewImg')document.getElementById('avatarPreviewStatus').textContent='Gambar profil berjaya dimuatkan.';};image.onerror=()=>{if(++index<candidates.length){image.src=candidates[index];return;}image.onerror=null;image.src=fallback;image.style.display='block';if(image.id==='avatarPreviewImg')document.getElementById('avatarPreviewStatus').textContent='Gambar gagal dimuatkan. Guna link terus gambar/GIF.';};image.src=candidates[0]||fallback;
     }
   }
-  function previewAvatar(){document.getElementById('avatarPreviewStatus').textContent='Memuatkan preview...';renderAvatarMedia(document.getElementById('avatarPreviewImg'),document.getElementById('editAvatar').value.trim());}
-  function renderProfileLogo(container,url,type){container.querySelectorAll('video').forEach(v=>{badgeVideoObservers.get(v)?.disconnect();v.pause();v.removeAttribute('src');v.load();});const safe=backgroundUrl(url);if(!safe||wallpaperType(type,safe)!=='video'){container.innerHTML=gifMarkup(url)||(container.dataset.original||document.querySelector('#profileName .verified-badge').dataset.original||'');return;}container.innerHTML='<span class="gateway-custom-gif"></span>';const video=document.createElement('video');video.className='profile-live-logo';video.muted=true;video.defaultMuted=true;video.loop=true;video.playsInline=true;video.preload='metadata';video.setAttribute('aria-hidden','true');video.src=safe;video.addEventListener('error',()=>{video.parentElement.hidden=true;});container.firstElementChild.append(video);if(typeof IntersectionObserver!=='undefined'){const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting&&!document.hidden)video.play().catch(()=>{});else video.pause();}));observer.observe(video);badgeVideoObservers.set(video,observer);}else video.play().catch(()=>{});}
-  document.addEventListener('visibilitychange',()=>document.querySelectorAll('.profile-live-logo,.profile-live-avatar').forEach(v=>{if(document.hidden)v.pause();else{const r=v.getBoundingClientRect();if(r.width&&r.height&&r.bottom>0&&r.top<innerHeight)v.play().catch(()=>{});}}));
+  function previewAvatar(){delete document.getElementById('avatarPreviewImg').dataset.mediaKey;document.getElementById('avatarPreviewStatus').textContent='Memuatkan preview...';renderAvatarMedia(document.getElementById('avatarPreviewImg'),document.getElementById('editAvatar').value.trim());}
+  function renderProfileLogo(container,url,type){const mediaKey=(backgroundUrl(url)||'default')+':'+(type||'auto');if(container.dataset.mediaKey===mediaKey)return;container.dataset.mediaKey=mediaKey;container.querySelectorAll('video').forEach(v=>{badgeVideoObservers.get(v)?.disconnect();v.pause();v.removeAttribute('src');v.load();});const safe=backgroundUrl(url);if(!safe||wallpaperType(type,safe)!=='video'){container.innerHTML=gifMarkup(url)||(container.dataset.original||document.querySelector('#profileName .verified-badge').dataset.original||'');return;}container.innerHTML='<span class="gateway-custom-gif"></span>';const video=document.createElement('video');video.className='profile-live-logo';video.muted=true;video.defaultMuted=true;video.loop=true;video.playsInline=true;video.preload='metadata';video.setAttribute('aria-hidden','true');video.src=safe;video.addEventListener('error',()=>{video.parentElement.hidden=true;});container.firstElementChild.append(video);const observer=observeDecorativeVideo(video);if(observer)badgeVideoObservers.set(video,observer);}
   function profileBadgeSize(value){const n=Number(value??22);return Number.isFinite(n)?Math.max(10,Math.min(64,n)):22;}
   function previewProfileBadge(){const size=profileBadgeSize(document.getElementById('editProfileBadgeSize').value);const preview=document.getElementById('profileBadgeGifPreview');const original=document.querySelector('#profileName .verified-badge');renderProfileLogo(preview,document.getElementById('editProfileBadgeGif').value,document.getElementById('editProfileBadgeType').value);preview.style.setProperty('--profile-badge-size',size+'px');document.getElementById('profileBadgeSizeValue').textContent=size+'px';}
   function renderProfile(){
@@ -1170,14 +1167,20 @@
     }
   }
   
+  let backgroundEffectsKey;
+  function mobileLiteEnabled(mode,small,coarse){return mode==='on'||(mode!=='off'&&(small||coarse));}
+  function applyMobilePerformance(){const lite=mobileLiteEnabled(appData.settings.mobilePerformance,window.matchMedia('(max-width: 768px)').matches,window.matchMedia('(pointer: coarse)').matches);document.body.classList.toggle('mobile-lite',lite);setupBackgroundEffects();}
+  ['(max-width: 768px)','(pointer: coarse)','(prefers-reduced-motion: reduce)'].forEach(query=>window.matchMedia(query).addEventListener('change',()=>{applyMobilePerformance();document.querySelectorAll('video.custom-wallpaper-video,.profile-live-logo,.profile-live-avatar').forEach(syncDecorativeVideo);}));
   function setupBackgroundEffects(){
-    // Fewer floating decorations on small/low-power screens — this is the
-    // biggest visual-effect cost on phones, so scale it down there.
-    const isMobile = window.matchMedia('(max-width: 768px)').matches;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const particleCount = prefersReduced ? 0 : (isMobile ? 10 : 25);
-    const petalCount = prefersReduced ? 0 : (isMobile ? 14 : 35);
-
+    const isMobile=window.matchMedia('(max-width: 768px)').matches;
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const blocked=reduced||document.body.classList.contains('effects-lite')||document.body.classList.contains('effects-no-motion');
+    const lite=document.body.classList.contains('mobile-lite');
+    const particleCount=blocked?0:lite?4:isMobile?10:25;
+    const petalCount=blocked||document.body.classList.contains('effects-no-sakura')?0:lite?4:isMobile?14:35;
+    const key=[particleCount,petalCount,appData.settings.gradientA].join(':');
+    if(backgroundEffectsKey===key)return;backgroundEffectsKey=key;
+    document.getElementById('particlesContainer').replaceChildren();document.getElementById('sakuraContainer').replaceChildren();
     // Floating particles
     const particlesContainer = document.getElementById('particlesContainer');
     const particleFrag = document.createDocumentFragment();
@@ -1217,17 +1220,8 @@
     }
     sakuraContainer.appendChild(sakuraFrag);
 
-    // Pause the whole decorative layer while the tab/app is in the
-    // background — no point burning CPU/battery on an invisible screen.
-    const bgWrap = document.getElementById('bgWrap');
-    document.addEventListener('visibilitychange', ()=>{
-      if(bgWrap) bgWrap.style.animationPlayState = document.hidden ? 'paused' : 'running';
-      document.querySelectorAll('.particle, .sakura-petal').forEach(el=>{
-        el.style.animationPlayState = document.hidden ? 'paused' : 'running';
-      });
-    });
   }
-  
+
   // MODAL CONTROL
   function openLoginModal(){ document.getElementById('loginModal').classList.add('active'); }
   function closeLoginModal(){ document.getElementById('loginModal').classList.remove('active'); }
@@ -1256,6 +1250,7 @@
     document.getElementById('socialTT').value = appData.settings.socials.tiktok || '';
     document.getElementById('socialYT').value = appData.settings.socials.youtube || '';
     populateThemePicker();
+    document.getElementById('mobilePerformance').value=['auto','on','off'].includes(appData.settings.mobilePerformance)?appData.settings.mobilePerformance:'auto';
     document.getElementById('cursorType').value=['default','custom','crosshair','cell','grab'].includes(appData.settings.cursorType)?appData.settings.cursorType:'default';
     document.getElementById('cursorUrl').value=appData.settings.cursorUrl||'';previewCustomCursor();
     document.getElementById('backgroundUrl').value = appData.settings.backgroundUrl || '';
@@ -1267,7 +1262,7 @@
     previewProfileOverlay();
     previewBackground();
   }
-  function closeAdminModal(){ document.querySelectorAll('#avatarPreview video').forEach(v=>{badgeVideoObservers.get(v)?.disconnect();v.pause();v.removeAttribute('src');v.load();v.remove();});applyProfileOverlay(appData.settings); document.getElementById('adminModal').classList.remove('active'); removeWallpaperVideos(document.getElementById('backgroundPreview')); }
+  function closeAdminModal(){ delete document.getElementById('avatarPreviewImg').dataset.mediaKey;delete document.getElementById('profileBadgeGifPreview').dataset.mediaKey;document.querySelectorAll('#profileBadgeGifPreview video').forEach(v=>{badgeVideoObservers.get(v)?.disconnect();v.pause();v.removeAttribute('src');v.load();v.remove();});document.querySelectorAll('#avatarPreview video').forEach(v=>{badgeVideoObservers.get(v)?.disconnect();v.pause();v.removeAttribute('src');v.load();v.remove();});applyProfileOverlay(appData.settings); document.getElementById('adminModal').classList.remove('active'); removeWallpaperVideos(document.getElementById('backgroundPreview')); }
   function openLinkModal(isEdit=false){
     document.getElementById('linkModal').classList.add('active');
     document.getElementById('linkModalTitle').textContent = isEdit ? 'Edit Pautan' : 'Tambah Pautan Baru';
@@ -1605,6 +1600,7 @@
     document.body.classList.toggle('effects-no-motion',!c.effects.animation || c.effects.lite);
     document.body.classList.toggle('effects-no-glow',!c.effects.glow || c.effects.lite);
     document.body.classList.toggle('effects-lite',!!c.effects.lite);
+    applyMobilePerformance();
     const dialog=document.getElementById('promoDialog');
     const p=c.promo, identity=JSON.stringify(p);
     if(dialog.open && (dialog.dataset.campaign!==identity || !p.enabled)) dialog.close();
@@ -2306,6 +2302,7 @@
       const newSettings = {
         ...appData.settings,
         designVersion: 3,
+        mobilePerformance:document.getElementById("mobilePerformance").value,
         cursorType:document.getElementById("cursorType").value,
         cursorUrl:cursorUrl||"",
         backgroundUrl: url,

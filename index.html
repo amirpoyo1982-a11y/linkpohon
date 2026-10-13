@@ -12,7 +12,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<link rel="stylesheet" href="style.css?v=secured-1-direct-links-20261014">
+<link rel="stylesheet" href="style.css?v=secured-1-mobile-lite-20261014">
 </head>
 <body data-theme="dark" class="clean-gateway">
 
@@ -412,7 +412,7 @@
       <!-- TAB: SETTINGS -->
       <div id="tab-settings" class="tab-content" style="display:none">
         <div class="form-group">
-          <label class="form-label" for="cursorType">Custom cursor (PC)</label>
+          <label class="form-label" for="mobilePerformance">Mode ringan</label><select id="mobilePerformance" class="form-input"><option value="auto">Auto — aktif pada phone / tablet</option><option value="on">ON — semua perangkat</option><option value="off">OFF — efek penuh</option></select><small>Kurangkan partikel dan blur. Wallpaper serta logo live kekal; video pause bila tidak kelihatan.</small><label class="form-label" for="cursorType">Custom cursor (PC)</label>
           <select id="cursorType" class="form-input"><option value="default">Cursor asal</option><option value="custom">Gambar custom melalui link</option><option value="crosshair">Crosshair</option><option value="cell">Cell</option><option value="grab">Grab</option></select>
           <input id="cursorUrl" class="form-input" type="url" placeholder="https://contoh.com/cursor.png">
           <small>Guna link terus PNG atau CUR, disarankan 32 × 32 px. Cursor custom untuk mouse di PC.</small>
@@ -691,7 +691,7 @@
 
 </div>
 
-<script defer src="app.js?v=secured-1-direct-links-20261014"></script>
+<script defer src="app.js?v=secured-1-mobile-lite-20261014"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a"}' crossorigin="anonymous"></script>
 </body>
 </html>
