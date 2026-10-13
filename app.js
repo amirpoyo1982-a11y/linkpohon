@@ -498,6 +498,8 @@
   function renderProfile(){
     const nameEl = document.getElementById('profileName');
     const badgeEl = nameEl.querySelector('.verified-badge');
+    if(!badgeEl.dataset.original) badgeEl.dataset.original=badgeEl.innerHTML;
+    badgeEl.innerHTML=gifMarkup(appData.profile.badgeGif)||badgeEl.dataset.original;
     nameEl.childNodes[0].nodeType === 3
       ? (nameEl.childNodes[0].textContent = (appData.profile.name || 'H4SX Gateway') + ' ')
       : nameEl.insertBefore(document.createTextNode((appData.profile.name || 'H4SX Gateway') + ' '), badgeEl);
@@ -705,9 +707,37 @@
     else if(!e.shiftKey && document.activeElement === last){e.preventDefault();first.focus();}
   });
 
+  function gifCandidates(value){
+    const url = backgroundUrl(value);
+    if(!url) return [];
+    const parsed = new URL(url);
+    const match = parsed.hostname.replace(/^www\./,'') === 'emoji.gg' ? parsed.pathname.match(/^\/emoji\/([a-z0-9-]+)\/?$/i) : null;
+    return match ? ['gif','webp','png'].map(ext=>'https://cdn3.emoji.gg/emojis/'+match[1]+'.'+ext) : [url];
+  }
+  function gifMarkup(value){
+    const urls = gifCandidates(value);
+    if(!urls.length) return '';
+    return '<span class="gateway-custom-gif"><img src="'+escapeHtml(urls[0])+'" data-fallback1="'+escapeHtml(urls[1]||'')+'" data-fallback2="'+escapeHtml(urls[2]||'')+'" alt="" loading="lazy" decoding="async" onerror="gatewayGifFallback(this)"></span>';
+  }
+  window.gatewayGifFallback = image=>{
+    const next = image.dataset.fallback1 || image.dataset.fallback2;
+    if(next){ if(image.dataset.fallback1) image.dataset.fallback1=''; else image.dataset.fallback2=''; image.src=next; }
+    else image.parentElement.hidden=true;
+  };
+  function customLinkStyle(link){
+    const color = normalizeHex(link.cardColor) || '#14101e';
+    const opacity = Number(link.cardOpacity);
+    const alpha = link.cardOpacity == null || !Number.isFinite(opacity) ? .55 : Math.max(0,Math.min(100,opacity))/100;
+    const rgb = [1,3,5].map(index=>parseInt(color.slice(index,index+2),16)).join(',');
+    return '--link-card:rgba('+rgb+','+alpha+');--link-text:'+(normalizeHex(link.textColor)||'#ffffff')+';--link-border:'+(normalizeHex(link.borderColor)||'#ffffff')+';';
+  }
+  function linkStyleInputs(){ return {customStyle:document.getElementById('linkCustomStyle').checked,cardColor:document.getElementById('linkCardColor').value,textColor:document.getElementById('linkTextColor').value,borderColor:document.getElementById('linkBorderColor').value,cardOpacity:Number(document.getElementById('linkCardOpacity').value)}; }
+  function previewLinkStyle(){ const data=linkStyleInputs(),preview=document.getElementById('linkCustomStylePreview');preview.classList.toggle('is-custom',data.customStyle);preview.style.cssText=customLinkStyle(data);document.getElementById('linkCardOpacityValue').textContent=data.cardOpacity+'%';preview.textContent=document.getElementById('linkTitle').value||'Preview kad link'; }
+  function fillLinkStyle(link={}){document.getElementById('linkVerifiedGif').value=link.verifiedGif||'';document.getElementById('linkCustomStyle').checked=link.customStyle===true;document.getElementById('linkCardColor').value=normalizeHex(link.cardColor)||'#14101e';document.getElementById('linkTextColor').value=normalizeHex(link.textColor)||'#ffffff';document.getElementById('linkBorderColor').value=normalizeHex(link.borderColor)||'#ffffff';document.getElementById('linkCardOpacity').value=link.cardOpacity??55;previewLinkStyle();}
   let badgeGradientSerial = 0;
   function linkBadgeHtml(link){
     if(link.verified !== true) return '';
+    if(link.verifiedStyle === 'gif' && gifCandidates(link.verifiedGif).length) return gifMarkup(link.verifiedGif);
     const rainbow = link.verifiedStyle === 'rainbow';
     const color = typeof link.verifiedColor === 'string' && /^#[0-9a-f]{6}$/i.test(link.verifiedColor) ? link.verifiedColor : '#38BDF8';
     const values = [1,3,5].map(i=>{
@@ -725,8 +755,9 @@
     const enabled = document.getElementById('linkVerified').checked;
     const style = document.getElementById('linkVerifiedStyle').value;
     document.getElementById('linkVerifiedStyle').disabled = !enabled;
-    document.getElementById('linkVerifiedColor').disabled = !enabled || style === 'rainbow';
-    document.getElementById('linkBadgePreview').innerHTML = linkBadgeHtml({verified:enabled,verifiedStyle:style,verifiedColor:document.getElementById('linkVerifiedColor').value});
+    document.getElementById('linkVerifiedColor').disabled = !enabled || style === 'rainbow' || style === 'gif';
+    document.getElementById('linkVerifiedGif').disabled = !enabled || style !== 'gif';
+    document.getElementById('linkBadgePreview').innerHTML = linkBadgeHtml({verified:enabled,verifiedStyle:style,verifiedColor:document.getElementById('linkVerifiedColor').value,verifiedGif:document.getElementById('linkVerifiedGif').value});
     document.getElementById('linkBadgePreviewTitle').textContent = document.getElementById('linkTitle').value.trim() || 'Website H4SX Market';
     document.getElementById('linkBadgeColorValue').textContent = style === 'rainbow' ? 'Rainbow bergerak' : document.getElementById('linkVerifiedColor').value.toUpperCase();
   }
@@ -749,7 +780,7 @@
     }
 
     return `
-      <a class="link-btn${link.maintenance ? ' maintenance' : ''}${isPinned ? ' pinned' : ''}" href="${link.url}" target="_blank" data-id="${link.id}" data-maintenance="${!!link.maintenance}" style="animation-delay:${delay}s">
+      <a class="link-btn${link.maintenance ? ' maintenance' : ''}${isPinned ? ' pinned' : ''}${link.customStyle ? ' custom-link-style' : ''}" href="${link.url}" target="_blank" data-id="${link.id}" data-maintenance="${!!link.maintenance}" style="animation-delay:${delay}s;${link.customStyle ? customLinkStyle(link) : ''}">
         <div class="link-icon">${iconHtml}</div>
         <div class="link-text">
           <div class="link-title">${escapeHtml(link.title)}${linkBadgeHtml(link)}</div>
@@ -1294,6 +1325,8 @@
     document.getElementById('adminModal').classList.add('active');
     renderAdminLinkList();
     renderAdminMusicList();
+    document.getElementById('editProfileBadgeGif').value=appData.profile.badgeGif||'';
+    document.getElementById('profileBadgeGifPreview').innerHTML=gifMarkup(appData.profile.badgeGif);
     document.getElementById('editName').value = appData.profile.name;
     document.getElementById('editHandle').value = appData.profile.handle;
     document.getElementById('editBio').value = appData.profile.bio;
@@ -1321,6 +1354,7 @@
       document.getElementById('linkCategory').value = currentCategory === 'all' ? 'Utama' : currentCategory;
       document.getElementById('linkIcon').value = '';
       document.getElementById('linkIconUrl').value = '';
+      fillLinkStyle();
       document.getElementById('linkMaintenance').checked = false;
       document.getElementById('linkPinned').checked = false;
       document.getElementById('linkVerified').checked = false;
@@ -1347,7 +1381,8 @@
     document.getElementById('linkMaintenance').checked = !!link.maintenance;
     document.getElementById('linkPinned').checked = !!link.pinned;
     document.getElementById('linkVerified').checked = link.verified === true;
-    document.getElementById('linkVerifiedStyle').value = link.verifiedStyle === 'rainbow' ? 'rainbow' : 'solid';
+    document.getElementById('linkVerifiedStyle').value = ['rainbow','gif'].includes(link.verifiedStyle) ? link.verifiedStyle : 'solid';
+    fillLinkStyle(link);
     document.getElementById('linkVerifiedColor').value = typeof link.verifiedColor === 'string' && /^#[0-9a-f]{6}$/i.test(link.verifiedColor) ? link.verifiedColor : '#38bdf8';
     document.getElementById('linkScheduleStart').value = link.scheduleStart || '';
     document.getElementById('linkScheduleEnd').value = link.scheduleEnd || '';
@@ -2233,14 +2268,19 @@
     });
     document.getElementById('volumeSlider').addEventListener('input', (e)=>{ if(audioElement){ audioElement.volume = e.target.value; } });
     
-    ['linkVerified','linkVerifiedStyle','linkVerifiedColor','linkTitle'].forEach(id=>document.getElementById(id).addEventListener('input',updateLinkBadgePreview));
+    ['linkVerified','linkVerifiedStyle','linkVerifiedColor','linkVerifiedGif','linkTitle'].forEach(id=>document.getElementById(id).addEventListener('input',updateLinkBadgePreview));
+    ['linkCustomStyle','linkCardColor','linkTextColor','linkBorderColor','linkCardOpacity','linkTitle'].forEach(id=>document.getElementById(id).addEventListener('input',previewLinkStyle));
+    document.getElementById('editProfileBadgeGif').addEventListener('input',()=>{document.getElementById('profileBadgeGifPreview').innerHTML=gifMarkup(document.getElementById('editProfileBadgeGif').value);});
     document.getElementById('saveLinkBtn').addEventListener('click', ()=>{
       if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
       const title = document.getElementById('linkTitle').value.trim();
       const url = document.getElementById('linkUrl').value.trim();
       if(!title || !url){ showToast('Tajuk dan URL wajib diisi!', 'warning'); return; }
       const editId = document.getElementById('editLinkId').value;
-      const linkData = { title, url, desc: document.getElementById('linkDesc').value.trim(), category: document.getElementById('linkCategory').value.trim() || 'Utama', icon: document.getElementById('linkIcon').value.trim(), iconUrl: document.getElementById('linkIconUrl').value.trim(), maintenance: document.getElementById('linkMaintenance').checked, pinned: document.getElementById('linkPinned').checked, verified: document.getElementById('linkVerified').checked, verifiedStyle: document.getElementById('linkVerifiedStyle').value === 'rainbow' ? 'rainbow' : 'solid', verifiedColor: document.getElementById('linkVerifiedColor').value, scheduleStart: document.getElementById('linkScheduleStart').value || null, scheduleEnd: document.getElementById('linkScheduleEnd').value || null, countdown: document.getElementById('linkCountdown').value || null, clicks: 0 };
+      const badgeGif=document.getElementById('linkVerifiedGif').value.trim();
+      const iconUrl=document.getElementById('linkIconUrl').value.trim();
+      if((badgeGif&&!gifCandidates(badgeGif).length)||(iconUrl&&!gifCandidates(iconUrl).length)){showToast('Link gambar/GIF mesti HTTPS yang sah.','warning');return;}
+      const linkData = { ...linkStyleInputs(),verifiedGif:badgeGif, title, url, desc: document.getElementById('linkDesc').value.trim(), category: document.getElementById('linkCategory').value.trim() || 'Utama', icon: document.getElementById('linkIcon').value.trim(), iconUrl: gifCandidates(iconUrl)[0] || '', maintenance: document.getElementById('linkMaintenance').checked, pinned: document.getElementById('linkPinned').checked, verified: document.getElementById('linkVerified').checked, verifiedStyle: document.getElementById('linkVerifiedStyle').value, verifiedColor: document.getElementById('linkVerifiedColor').value, scheduleStart: document.getElementById('linkScheduleStart').value || null, scheduleEnd: document.getElementById('linkScheduleEnd').value || null, countdown: document.getElementById('linkCountdown').value || null, clicks: 0 };
       const btn = document.getElementById('saveLinkBtn');
       btn.disabled = true; btn.textContent = 'Menyimpan...';
       const doSave = ()=>{
@@ -2269,8 +2309,10 @@
     });
     
     document.getElementById('saveProfileBtn').addEventListener('click', ()=>{
+      const badgeGif=document.getElementById('editProfileBadgeGif').value.trim();
+      if(badgeGif&&!gifCandidates(badgeGif).length){showToast('GIF profil mesti guna link HTTPS yang sah.','warning');return;}
       if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
-      const profileData = {
+      const profileData = { ...appData.profile,badgeGif,
         name: document.getElementById('editName').value.trim() || 'H4SX Gateway',
         handle: document.getElementById('editHandle').value.trim() || '@h4sx',
         bio: document.getElementById('editBio').value.trim(),
