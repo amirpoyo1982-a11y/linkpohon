@@ -12,7 +12,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<link rel="stylesheet" href="style.css?v=secured-1-link-modal-fix-20261014">
+<link rel="stylesheet" href="style.css?v=secured-1-profile-colors-20261014">
 </head>
 <body data-theme="dark" class="clean-gateway">
 
@@ -433,9 +433,10 @@
       <!-- TAB: SETTINGS -->
       <div id="tab-settings" class="tab-content" style="display:none">
         <div class="form-group">
-          <label class="form-label"><input id="profileOverlayEnabled" type="checkbox" checked> Kotak hitam belakang profil</label>
-          <label class="form-label" for="profileOverlayOpacity">Ketebalan hitam: <output id="profileOverlayOpacityValue">55%</output></label>
+          <label class="form-label"><input id="profileOverlayEnabled" type="checkbox" checked> Kotak custom belakang profil</label>
+          <label class="form-label" for="profileOverlayOpacity">Ketebalan warna: <output id="profileOverlayOpacityValue">55%</output></label>
           <input id="profileOverlayOpacity" type="range" min="0" max="100" step="1" value="55">
+          <div class="profile-overlay-colors"><label>Warna kotak <input id="profileOverlayColor" type="color" value="#000000"></label><label>Warna teks <input id="profileOverlayTextColor" type="color" value="#f5f4fa"></label></div>
           <button id="profileOverlayReset" type="button" class="btn btn-secondary">Reset lapisan profil</button>
           <div id="profileOverlayPreview" class="profile-overlay-preview"><strong>H4SX</strong><p>Preview kotak belakang nama dan bio.</p></div>
           <label class="form-label" for="backgroundUrl">Wallpaper Custom — Gambar / Live Video</label>
@@ -705,7 +706,7 @@
 
 </div>
 
-<script defer src="app.js?v=secured-1-link-modal-fix-20261014"></script>
+<script defer src="app.js?v=secured-1-profile-colors-20261014"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a"}' crossorigin="anonymous"></script>
 </body>
 </html>

@@ -140,6 +140,8 @@
       backgroundBrightness: 100,
       profileOverlayEnabled: true,
       profileOverlayOpacity: 55,
+      profileOverlayColor: "#000000",
+      profileOverlayTextColor: "#f5f4fa",
       socials: {
         whatsapp: '#',
         instagram: '#',
@@ -489,8 +491,8 @@
     img.src = url;
   }
   function profileOverlayOpacity(value){const n=Number(value ?? 55);return Number.isFinite(n)?Math.max(0,Math.min(100,n)):55;}
-  function applyProfileOverlay(settings){document.body.classList.toggle('has-profile-overlay',settings.profileOverlayEnabled!==false);document.documentElement.style.setProperty('--profile-overlay-opacity',profileOverlayOpacity(settings.profileOverlayOpacity)/100);}
-  function previewProfileOverlay(){const settings={profileOverlayEnabled:document.getElementById('profileOverlayEnabled').checked,profileOverlayOpacity:profileOverlayOpacity(document.getElementById('profileOverlayOpacity').value)};applyProfileOverlay(settings);document.getElementById('profileOverlayOpacityValue').textContent=settings.profileOverlayOpacity+'%';const preview=document.getElementById('profileOverlayPreview');preview.style.background=settings.profileOverlayEnabled?'rgba(0,0,0,'+settings.profileOverlayOpacity/100+')':'transparent';}
+  function applyProfileOverlay(settings){document.body.classList.toggle('has-profile-overlay',settings.profileOverlayEnabled!==false);document.documentElement.style.setProperty('--profile-overlay-opacity',profileOverlayOpacity(settings.profileOverlayOpacity)/100);const c=normalizeHex(settings.profileOverlayColor)||'#000000';document.documentElement.style.setProperty('--profile-overlay-rgb',[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)).join(','));document.documentElement.style.setProperty('--profile-overlay-text',normalizeHex(settings.profileOverlayTextColor)||'#f5f4fa');}
+  function previewProfileOverlay(){const settings={profileOverlayEnabled:document.getElementById('profileOverlayEnabled').checked,profileOverlayOpacity:profileOverlayOpacity(document.getElementById('profileOverlayOpacity').value),profileOverlayColor:document.getElementById('profileOverlayColor').value,profileOverlayTextColor:document.getElementById('profileOverlayTextColor').value};applyProfileOverlay(settings);document.getElementById('profileOverlayOpacityValue').textContent=settings.profileOverlayOpacity+'%';const preview=document.getElementById('profileOverlayPreview');preview.style.background=settings.profileOverlayEnabled?settings.profileOverlayColor+Math.round(settings.profileOverlayOpacity*2.55).toString(16).padStart(2,'0'):'transparent';preview.style.color=settings.profileOverlayTextColor;}
   function applyTheme(){
     applyProfileOverlay(appData.settings);
     applyBackground();
@@ -1352,7 +1354,7 @@
     document.getElementById('backgroundDim').value = backgroundDim(appData.settings.backgroundDim);
     document.getElementById('backgroundBrightness').value = backgroundBrightness(appData.settings.backgroundBrightness);
     document.getElementById('profileOverlayEnabled').checked=appData.settings.profileOverlayEnabled!==false;
-    document.getElementById('profileOverlayOpacity').value=profileOverlayOpacity(appData.settings.profileOverlayOpacity);
+    document.getElementById('profileOverlayOpacity').value=profileOverlayOpacity(appData.settings.profileOverlayOpacity);[['profileOverlayColor','#000000'],['profileOverlayTextColor','#f5f4fa']].forEach(([id,c])=>document.getElementById(id).value=normalizeHex(appData.settings[id])||c);
     previewProfileOverlay();
     previewBackground();
   }
@@ -2370,8 +2372,8 @@
       });
     });
 
-    ['profileOverlayEnabled','profileOverlayOpacity'].forEach(id=>document.getElementById(id).addEventListener('input',previewProfileOverlay));
-    document.getElementById('profileOverlayReset').addEventListener('click',()=>{document.getElementById('profileOverlayEnabled').checked=true;document.getElementById('profileOverlayOpacity').value=55;previewProfileOverlay();});
+    ['profileOverlayEnabled','profileOverlayOpacity','profileOverlayColor','profileOverlayTextColor'].forEach(id=>document.getElementById(id).addEventListener('input',previewProfileOverlay));
+    document.getElementById('profileOverlayReset').addEventListener('click',()=>{document.getElementById('profileOverlayEnabled').checked=true;document.getElementById('profileOverlayOpacity').value=55;document.getElementById('profileOverlayColor').value='#000000';document.getElementById('profileOverlayTextColor').value='#f5f4fa';previewProfileOverlay();});
     document.getElementById('backgroundPreviewBtn').addEventListener('click', previewBackground);
     document.getElementById('backgroundType').addEventListener('change', previewBackground);
     document.getElementById('backgroundBrightness').addEventListener('input',()=>{const value=backgroundBrightness(document.getElementById('backgroundBrightness').value);document.getElementById('backgroundBrightnessValue').textContent=value+'%';document.getElementById('backgroundPreview').style.setProperty('--wallpaper-brightness',value/100);});
@@ -2413,6 +2415,8 @@
         backgroundUrl: url,
         backgroundType: document.getElementById('backgroundType').value,
         profileOverlayEnabled:document.getElementById('profileOverlayEnabled').checked,
+        profileOverlayColor:document.getElementById('profileOverlayColor').value,
+        profileOverlayTextColor:document.getElementById('profileOverlayTextColor').value,
         profileOverlayOpacity:profileOverlayOpacity(document.getElementById('profileOverlayOpacity').value),
         backgroundBrightness: backgroundBrightness(document.getElementById('backgroundBrightness').value),
         backgroundDim: backgroundDim(document.getElementById('backgroundDim').value),
