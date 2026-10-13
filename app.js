@@ -514,8 +514,19 @@
   }
   
   const badgeVideoObservers=new WeakMap();
+  function renderAvatarMedia(image,value){
+    const parent=image.parentElement;parent.querySelectorAll('video.profile-live-avatar').forEach(v=>{badgeVideoObservers.get(v)?.disconnect();v.pause();v.removeAttribute('src');v.load();v.remove();});
+    const fallback='https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png';const url=backgroundUrl(value)||fallback;image.style.display='block';image.referrerPolicy='no-referrer';
+    if(wallpaperType('auto',url)==='video'){
+      image.onload=null;image.onerror=null;image.src=fallback;image.style.display='none';const video=document.createElement('video');video.className='profile-live-avatar';video.muted=true;video.defaultMuted=true;video.loop=true;video.playsInline=true;video.preload='metadata';video.setAttribute('aria-label','Logo profil live');video.src=url;video.addEventListener('error',()=>{badgeVideoObservers.get(video)?.disconnect();video.pause();video.remove();image.style.display='block';if(image.id==='avatarPreviewImg')document.getElementById('avatarPreviewStatus').textContent='Video tidak boleh dimuatkan. Semak link MP4/WebM.';});video.addEventListener('loadeddata',()=>{if(image.id==='avatarPreviewImg')document.getElementById('avatarPreviewStatus').textContent='Video profil berjaya dimuatkan.';});parent.insertBefore(video,image);
+      if(typeof IntersectionObserver!=='undefined'){const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting&&!document.hidden)video.play().catch(()=>{});else video.pause();}));observer.observe(video);badgeVideoObservers.set(video,observer);}else video.play().catch(()=>{});
+    }else{
+      const candidates=gifCandidates(value);let index=0;image.onload=()=>{image.style.display='block';if(image.id==='avatarPreviewImg')document.getElementById('avatarPreviewStatus').textContent='Gambar profil berjaya dimuatkan.';};image.onerror=()=>{if(++index<candidates.length){image.src=candidates[index];return;}image.onerror=null;image.src=fallback;image.style.display='block';if(image.id==='avatarPreviewImg')document.getElementById('avatarPreviewStatus').textContent='Gambar gagal dimuatkan. Guna link terus gambar/GIF.';};image.src=candidates[0]||fallback;
+    }
+  }
+  function previewAvatar(){document.getElementById('avatarPreviewStatus').textContent='Memuatkan preview...';renderAvatarMedia(document.getElementById('avatarPreviewImg'),document.getElementById('editAvatar').value.trim());}
   function renderProfileLogo(container,url,type){container.querySelectorAll('video').forEach(v=>{badgeVideoObservers.get(v)?.disconnect();v.pause();v.removeAttribute('src');v.load();});const safe=backgroundUrl(url);if(!safe||wallpaperType(type,safe)!=='video'){container.innerHTML=gifMarkup(url)||(container.dataset.original||document.querySelector('#profileName .verified-badge').dataset.original||'');return;}container.innerHTML='<span class="gateway-custom-gif"></span>';const video=document.createElement('video');video.className='profile-live-logo';video.muted=true;video.defaultMuted=true;video.loop=true;video.playsInline=true;video.preload='metadata';video.setAttribute('aria-hidden','true');video.src=safe;video.addEventListener('error',()=>{video.parentElement.hidden=true;});container.firstElementChild.append(video);if(typeof IntersectionObserver!=='undefined'){const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting&&!document.hidden)video.play().catch(()=>{});else video.pause();}));observer.observe(video);badgeVideoObservers.set(video,observer);}else video.play().catch(()=>{});}
-  document.addEventListener('visibilitychange',()=>document.querySelectorAll('.profile-live-logo').forEach(v=>{if(document.hidden)v.pause();else{const r=v.getBoundingClientRect();if(r.width&&r.height&&r.bottom>0&&r.top<innerHeight)v.play().catch(()=>{});}}));
+  document.addEventListener('visibilitychange',()=>document.querySelectorAll('.profile-live-logo,.profile-live-avatar').forEach(v=>{if(document.hidden)v.pause();else{const r=v.getBoundingClientRect();if(r.width&&r.height&&r.bottom>0&&r.top<innerHeight)v.play().catch(()=>{});}}));
   function profileBadgeSize(value){const n=Number(value??22);return Number.isFinite(n)?Math.max(10,Math.min(64,n)):22;}
   function previewProfileBadge(){const size=profileBadgeSize(document.getElementById('editProfileBadgeSize').value);const preview=document.getElementById('profileBadgeGifPreview');const original=document.querySelector('#profileName .verified-badge');renderProfileLogo(preview,document.getElementById('editProfileBadgeGif').value,document.getElementById('editProfileBadgeType').value);preview.style.setProperty('--profile-badge-size',size+'px');document.getElementById('profileBadgeSizeValue').textContent=size+'px';}
   function renderProfile(){
@@ -530,11 +541,8 @@
     document.getElementById('profileHandle').textContent = appData.profile.handle || '@h4sx';
     const avatarImg = document.getElementById('avatarImg');
     const logoBannerImg = document.getElementById('logoBannerImg');
-    // Prioritize Firebase avatar, fallback to default if not set
-    const avatarUrl = appData.profile.avatar || 'https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png';
-    avatarImg.onload = ()=>{ avatarImg.style.display = ''; };
-    avatarImg.src = avatarUrl;
-    logoBannerImg.src = avatarUrl;
+    renderAvatarMedia(avatarImg,appData.profile.avatar);
+    renderAvatarMedia(logoBannerImg,appData.profile.avatar);
     document.title = (appData.profile.name || 'H4SX Gateway') + ' | Official Links';
     // Location — fallback-safe: kalau Firebase belum load / field kosong, guna default
     const locEl = document.getElementById('profileLocation');
@@ -1354,7 +1362,8 @@
     document.getElementById('editName').value = appData.profile.name;
     document.getElementById('editHandle').value = appData.profile.handle;
     document.getElementById('editBio').value = appData.profile.bio;
-    document.getElementById('editAvatar').value = appData.profile.avatar;
+    document.getElementById('editAvatar').value = appData.profile.avatar||'';
+    previewAvatar();
     document.getElementById('editLocation').value = appData.profile.location || '';
     document.getElementById('socialWA').value = appData.settings.socials.whatsapp || '';
     document.getElementById('socialIG').value = appData.settings.socials.instagram || '';
@@ -1372,7 +1381,7 @@
     previewProfileOverlay();
     previewBackground();
   }
-  function closeAdminModal(){ applyProfileOverlay(appData.settings); document.getElementById('adminModal').classList.remove('active'); removeWallpaperVideos(document.getElementById('backgroundPreview')); }
+  function closeAdminModal(){ document.querySelectorAll('#avatarPreview video').forEach(v=>{badgeVideoObservers.get(v)?.disconnect();v.pause();v.removeAttribute('src');v.load();v.remove();});applyProfileOverlay(appData.settings); document.getElementById('adminModal').classList.remove('active'); removeWallpaperVideos(document.getElementById('backgroundPreview')); }
   function openLinkModal(isEdit=false){
     document.getElementById('linkModal').classList.add('active');
     document.getElementById('linkModalTitle').textContent = isEdit ? 'Edit Pautan' : 'Tambah Pautan Baru';
@@ -2325,18 +2334,22 @@
       }).catch(resetBtn);
     });
     
-    document.getElementById('saveProfileBtn').addEventListener('click', ()=>{
+    document.getElementById('previewAvatarBtn').addEventListener('click',previewAvatar);
+    document.getElementById('saveProfileBtn').addEventListener('click', async ()=>{
       const badgeGif=document.getElementById('editProfileBadgeGif').value.trim();
       if(badgeGif&&!gifCandidates(badgeGif).length){showToast('GIF profil mesti guna link HTTPS yang sah.','warning');return;}
       if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
+      const avatar=backgroundUrl(document.getElementById('editAvatar').value.trim());
+      if(avatar===null){showToast('Gambar/video profil mesti guna link HTTPS yang sah.','warning');return;}
       const profileData = { ...appData.profile,badgeGif,badgeType:document.getElementById("editProfileBadgeType").value,badgeSize:profileBadgeSize(document.getElementById("editProfileBadgeSize").value),
         name: document.getElementById('editName').value.trim() || 'H4SX Gateway',
         handle: document.getElementById('editHandle').value.trim() || '@h4sx',
         bio: document.getElementById('editBio').value.trim(),
-        avatar: document.getElementById('editAvatar').value.trim(),
+        avatar,
         location: document.getElementById('editLocation').value.trim()
       };
-      saveToFirebase('profile', profileData);
+      const button=document.getElementById('saveProfileBtn');button.disabled=true;
+      try{await saveToFirebase('profile',profileData);appData.profile=profileData;cacheData(appData);renderProfile();}catch(e){/* Save reports the error. */}finally{button.disabled=false;}
     });
     
     // Custom theme picker: color <-> hex sync + live preview

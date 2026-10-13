@@ -12,7 +12,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<link rel="stylesheet" href="style.css?v=secured-1-custom-cursor-20261014">
+<link rel="stylesheet" href="style.css?v=secured-1-live-avatar-fix-20261014">
 </head>
 <body data-theme="dark" class="clean-gateway">
 
@@ -197,7 +197,7 @@
   <div class="profile-card" id="profileCard">
     <div class="avatar-ring">
       <div class="avatar-inner">
-        <img id="avatarImg" src="https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png" alt="H4SX Logo" onerror="this.style.display='none'">
+        <img id="avatarImg" src="https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png" alt="H4SX Logo">
       </div>
       <div class="online-dot"></div>
     </div>
@@ -422,8 +422,9 @@
           <input type="text" class="form-input" id="editLocation" placeholder="Contoh: Kedah, Malaysia">
         </div>
         <div class="form-group">
-          <label class="form-label">URL Gambar Profil</label>
-          <input type="text" class="form-input" id="editAvatar" placeholder="https://...">
+          <label class="form-label">URL Gambar / Video Profil</label>
+          <input type="url" class="form-input" id="editAvatar" placeholder="Link terus gambar, GIF, MP4 atau WebM">
+          <button type="button" id="previewAvatarBtn" class="btn btn-secondary">Preview gambar / video</button><div id="avatarPreview" class="avatar-media-preview"><img id="avatarPreviewImg" alt="Preview profil"></div><small id="avatarPreviewStatus"></small>
         </div>
         <div class="form-group"><label class="form-label">Logo profil custom (GIF / gambar / live video)</label><input id="editProfileBadgeGif" class="form-input" type="url" placeholder="Link GIF, gambar atau MP4/WebM; kosongkan untuk centang asal"><label class="form-label" for="editProfileBadgeType">Jenis logo</label><select id="editProfileBadgeType" class="form-input"><option value="auto">Auto detect</option><option value="image">Gambar / GIF</option><option value="video">Live video (MP4 / WebM)</option></select><small>Guna link terus HTTPS. Video dimainkan berulang tanpa suara.</small><label class="form-label" for="editProfileBadgeSize">Saiz logo sebelah nama: <output id="profileBadgeSizeValue">22px</output></label><input id="editProfileBadgeSize" type="range" min="10" max="64" step="1" value="22"><button id="resetProfileBadgeSize" type="button" class="btn btn-secondary">Reset saiz</button><div id="profileBadgeGifPreview" class="link-badge-preview"></div></div>
         <button class="btn btn-primary" id="saveProfileBtn">Simpan Profil</button>
@@ -711,7 +712,7 @@
 
 </div>
 
-<script defer src="app.js?v=secured-1-custom-cursor-20261014"></script>
+<script defer src="app.js?v=secured-1-live-avatar-fix-20261014"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a"}' crossorigin="anonymous"></script>
 </body>
 </html>
