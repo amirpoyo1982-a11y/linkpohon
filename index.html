@@ -12,7 +12,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-<link rel="stylesheet" href="style.css?v=secured-1-profile-overlay-20261014">
+<link rel="stylesheet" href="style.css?v=secured-1-link-modal-fix-20261014">
 </head>
 <body data-theme="dark" class="clean-gateway">
 
@@ -606,13 +606,13 @@
         <input type="datetime-local" class="form-input" id="linkCountdown">
         <small style="display:block;color:var(--muted);font-size:11px;margin-top:6px">Papar jam detik-detik kat kad pautan sehingga tarikh/masa ni tamat — bagus untuk promo/event.</small>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="cancelLinkBtn">Batal</button>
       <div class="form-group"><label class="switch"><input id="linkCustomStyle" type="checkbox"><span class="slider"></span></label><label class="form-label">Warna kad custom untuk link ini</label>
         <div class="theme-picker-grid"><label>Warna kad<input id="linkCardColor" type="color" value="#14101e"></label><label>Warna teks<input id="linkTextColor" type="color" value="#ffffff"></label><label>Border<input id="linkBorderColor" type="color" value="#ffffff"></label></div>
         <label class="form-label" for="linkCardOpacity">Ketebalan kad <output id="linkCardOpacityValue">55%</output></label><input id="linkCardOpacity" type="range" min="0" max="100" value="55">
         <div id="linkCustomStylePreview" class="link-custom-style-preview">Preview kad link</div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancelLinkBtn">Batal</button>
       <button class="btn btn-primary" id="saveLinkBtn">Simpan ke Firebase</button>
     </div>
   </div>
@@ -705,7 +705,7 @@
 
 </div>
 
-<script defer src="app.js?v=secured-1-profile-overlay-20261014"></script>
+<script defer src="app.js?v=secured-1-link-modal-fix-20261014"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"7f7b0fd8732c4326aae4b9d58d5c514a"}' crossorigin="anonymous"></script>
 </body>
 </html>
