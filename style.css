@@ -1158,3 +1158,7 @@ dialog.intro-dialog{--intro-progress:16%;position:fixed;inset:0;margin:0;border:
 @keyframes badgeRainbowCycle{to{filter:hue-rotate(360deg) drop-shadow(0 0 3px rgba(170,120,255,.48))}}
 #linkVerifiedStyle{margin:8px 0 2px;width:100%}
 @media(prefers-reduced-motion:reduce){.link-verified-rainbow svg{animation:none}}
+
+.custom-wallpaper-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.background-preview .custom-wallpaper-video{z-index:-2}
+.background-preview span{position:relative;z-index:1}

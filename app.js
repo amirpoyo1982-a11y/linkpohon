@@ -135,6 +135,7 @@
       gradientB: '#ba55d3',
       theme: 'dark',
       backgroundUrl: '',
+      backgroundType: 'auto',
       backgroundDim: 45,
       socials: {
         whatsapp: '#',
@@ -387,19 +388,58 @@
     const n = Number(value ?? 45);
     return Number.isFinite(n) ? Math.min(85, Math.max(0, n)) : 45;
   }
+  function wallpaperType(mode, url){
+    if(mode === 'off' || !url) return 'off';
+    if(mode === 'video' || mode === 'image') return mode;
+    return /\.(mp4|webm)$/i.test(new URL(url).pathname) ? 'video' : 'image';
+  }
+  let wallpaperObserver;
+  function removeWallpaperVideos(container){
+    container.querySelectorAll('video.custom-wallpaper-video').forEach(video=>{ wallpaperObserver?.unobserve(video); video.pause(); video.removeAttribute('src'); video.load(); video.remove(); });
+  }
+  function createWallpaperVideo(container, url, onReady, onError){
+    const video = document.createElement('video');
+    video.className = 'custom-wallpaper-video'; video.muted = true; video.defaultMuted = true;
+    video.loop = true; video.playsInline = true; video.preload = 'metadata';
+    video.setAttribute('aria-hidden','true'); video.tabIndex = -1;
+    video.addEventListener('loadeddata', onReady, {once:true});
+    video.addEventListener('error', onError, {once:true});
+    container.appendChild(video); video.src = url;
+    if(typeof IntersectionObserver !== 'undefined'){
+      if(!wallpaperObserver) wallpaperObserver = new IntersectionObserver(entries=>entries.forEach(entry=>{
+        if(entry.isIntersecting && !document.hidden) entry.target.play().catch(()=>{}); else entry.target.pause();
+      }));
+      wallpaperObserver.observe(video);
+    } else if(!document.hidden) video.play().catch(()=>{});
+    return video;
+  }
+  document.addEventListener('visibilitychange', ()=>{
+    document.querySelectorAll('video.custom-wallpaper-video').forEach(video=>{
+      if(document.hidden) video.pause();
+      else if(video.closest('.bg-img') || document.getElementById('adminModal').classList.contains('active')) video.play().catch(()=>{});
+    });
+  });
   function cssImage(url){ return 'url(' + JSON.stringify(url) + ')'; }
   let backgroundRequest = 0;
   let appliedBackground;
   function applyBackground(){
     const url = backgroundUrl(appData.settings.backgroundUrl) || '';
     document.documentElement.style.setProperty('--background-dim', backgroundDim(appData.settings.backgroundDim)/100);
-    if(url === appliedBackground) return;
-    appliedBackground = url;
+    const type = wallpaperType(appData.settings.backgroundType, url);
+    const key = type + ':' + url;
+    if(key === appliedBackground) return;
+    appliedBackground = key;
     const request = ++backgroundRequest;
     const layer = document.querySelector('.bg-img');
     document.body.classList.remove('has-custom-background');
+    removeWallpaperVideos(layer);
     layer.style.backgroundImage = 'none';
-    if(!url) return;
+    if(type === 'off') return;
+    if(type === 'video'){
+      document.body.classList.add('has-custom-background');
+      createWallpaperVideo(layer, url, ()=>{ if(request === backgroundRequest) document.body.classList.add('has-custom-background'); }, ()=>{ if(request === backgroundRequest){ appliedBackground = undefined; document.body.classList.remove('has-custom-background'); removeWallpaperVideos(layer); } });
+      return;
+    }
     const img = new Image();
     img.onload = ()=>{
       if(request !== backgroundRequest) return;
@@ -419,9 +459,16 @@
     const dim = backgroundDim(document.getElementById('backgroundDim').value);
     document.getElementById('backgroundDimValue').textContent = dim + '%';
     preview.style.setProperty('--background-dim', dim/100);
+    removeWallpaperVideos(preview);
     preview.style.backgroundImage = 'none';
     status.textContent = url === null ? 'Masukkan URL HTTPS yang sah.' : !url ? 'Background asal digunakan.' : 'Memuatkan pratonton…';
     if(!url) return;
+    const type = wallpaperType(document.getElementById('backgroundType').value, url);
+    if(type === 'off'){ status.textContent = 'Wallpaper dimatikan; tema asal digunakan.'; return; }
+    if(type === 'video'){
+      createWallpaperVideo(preview, url, ()=>{ if(request === previewRequest) status.textContent = 'Live wallpaper berjaya dimuatkan. Tekan Simpan Tetapan untuk guna.'; }, ()=>{ if(request === previewRequest) status.textContent = 'Video gagal dimuatkan. Guna pautan terus MP4/WebM yang boleh diakses umum.'; });
+      return;
+    }
     const img = new Image();
     img.onload = ()=>{
       if(request !== previewRequest) return;
@@ -1258,10 +1305,11 @@
     document.getElementById('socialYT').value = appData.settings.socials.youtube || '';
     populateThemePicker();
     document.getElementById('backgroundUrl').value = appData.settings.backgroundUrl || '';
+    document.getElementById('backgroundType').value = ['auto','image','video','off'].includes(appData.settings.backgroundType) ? appData.settings.backgroundType : 'auto';
     document.getElementById('backgroundDim').value = backgroundDim(appData.settings.backgroundDim);
     previewBackground();
   }
-  function closeAdminModal(){ document.getElementById('adminModal').classList.remove('active'); }
+  function closeAdminModal(){ document.getElementById('adminModal').classList.remove('active'); removeWallpaperVideos(document.getElementById('backgroundPreview')); }
   function openLinkModal(isEdit=false){
     document.getElementById('linkModal').classList.add('active');
     document.getElementById('linkModalTitle').textContent = isEdit ? 'Edit Pautan' : 'Tambah Pautan Baru';
@@ -2268,6 +2316,7 @@
     });
 
     document.getElementById('backgroundPreviewBtn').addEventListener('click', previewBackground);
+    document.getElementById('backgroundType').addEventListener('change', previewBackground);
     document.getElementById('backgroundDim').addEventListener('input', ()=>{
       const dim = backgroundDim(document.getElementById('backgroundDim').value);
       document.getElementById('backgroundDimValue').textContent = dim + '%';
@@ -2275,12 +2324,14 @@
     });
     document.getElementById('backgroundUrl').addEventListener('input', ()=>{
       ++previewRequest;
+      removeWallpaperVideos(document.getElementById('backgroundPreview'));
       document.getElementById('backgroundPreview').style.backgroundImage = 'none';
       document.getElementById('backgroundStatus').textContent = 'Tekan Pratonton untuk semak gambar.';
     });
     document.getElementById('backgroundResetBtn').addEventListener('click', ()=>{
       document.getElementById('backgroundUrl').value = '';
       document.getElementById('backgroundDim').value = 45;
+      document.getElementById('backgroundType').value = 'auto';
       previewBackground();
     });
     document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
@@ -2300,6 +2351,7 @@
         ...appData.settings,
         designVersion: 3,
         backgroundUrl: url,
+        backgroundType: document.getElementById('backgroundType').value,
         backgroundDim: backgroundDim(document.getElementById('backgroundDim').value),
         theme: appData.settings.theme || 'dark',
         accentColor: accentC,
