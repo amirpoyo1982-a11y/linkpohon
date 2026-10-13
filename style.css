@@ -1176,3 +1176,6 @@ body.clean-gateway.has-profile-overlay .profile-card :is(.name,.handle,.bio,.loc
 .profile-overlay-preview{border-radius:14px;padding:18px;margin:14px 0;color:#fff;border:1px solid #ffffff22;text-align:center}
 
 .profile-overlay-colors{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0 18px}.profile-overlay-colors label{display:flex;align-items:center;gap:6px;font-size:13px}
+
+/* Compact desktop profile and links. */
+@media(min-width:601px){body.clean-gateway .main-wrap{width:100%;max-width:430px;padding-left:16px;padding-right:16px}body.clean-gateway .top-bar{max-width:430px}body.clean-gateway .profile-card{width:100%;min-width:0}body.clean-gateway .bio{max-width:100%;overflow-wrap:anywhere}}
