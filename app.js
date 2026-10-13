@@ -509,13 +509,16 @@
     document.documentElement.style.setProperty('--grad-b-rgb', hexToRgbStr(gradB));
   }
   
+  const badgeVideoObservers=new WeakMap();
+  function renderProfileLogo(container,url,type){container.querySelectorAll('video').forEach(v=>{badgeVideoObservers.get(v)?.disconnect();v.pause();v.removeAttribute('src');v.load();});const safe=backgroundUrl(url);if(!safe||wallpaperType(type,safe)!=='video'){container.innerHTML=gifMarkup(url)||(container.dataset.original||document.querySelector('#profileName .verified-badge').dataset.original||'');return;}container.innerHTML='<span class="gateway-custom-gif"></span>';const video=document.createElement('video');video.className='profile-live-logo';video.muted=true;video.defaultMuted=true;video.loop=true;video.playsInline=true;video.preload='metadata';video.setAttribute('aria-hidden','true');video.src=safe;video.addEventListener('error',()=>{video.parentElement.hidden=true;});container.firstElementChild.append(video);if(typeof IntersectionObserver!=='undefined'){const observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting&&!document.hidden)video.play().catch(()=>{});else video.pause();}));observer.observe(video);badgeVideoObservers.set(video,observer);}else video.play().catch(()=>{});}
+  document.addEventListener('visibilitychange',()=>document.querySelectorAll('.profile-live-logo').forEach(v=>{if(document.hidden)v.pause();else{const r=v.getBoundingClientRect();if(r.width&&r.height&&r.bottom>0&&r.top<innerHeight)v.play().catch(()=>{});}}));
   function profileBadgeSize(value){const n=Number(value??22);return Number.isFinite(n)?Math.max(10,Math.min(64,n)):22;}
-  function previewProfileBadge(){const size=profileBadgeSize(document.getElementById('editProfileBadgeSize').value);const preview=document.getElementById('profileBadgeGifPreview');const original=document.querySelector('#profileName .verified-badge');preview.innerHTML=gifMarkup(document.getElementById('editProfileBadgeGif').value)||(original.dataset.original||original.innerHTML);preview.style.setProperty('--profile-badge-size',size+'px');document.getElementById('profileBadgeSizeValue').textContent=size+'px';}
+  function previewProfileBadge(){const size=profileBadgeSize(document.getElementById('editProfileBadgeSize').value);const preview=document.getElementById('profileBadgeGifPreview');const original=document.querySelector('#profileName .verified-badge');renderProfileLogo(preview,document.getElementById('editProfileBadgeGif').value,document.getElementById('editProfileBadgeType').value);preview.style.setProperty('--profile-badge-size',size+'px');document.getElementById('profileBadgeSizeValue').textContent=size+'px';}
   function renderProfile(){
     const nameEl = document.getElementById('profileName');
     const badgeEl = nameEl.querySelector('.verified-badge');
     if(!badgeEl.dataset.original) badgeEl.dataset.original=badgeEl.innerHTML;
-    badgeEl.innerHTML=gifMarkup(appData.profile.badgeGif)||badgeEl.dataset.original;
+    renderProfileLogo(badgeEl,appData.profile.badgeGif,appData.profile.badgeType||"auto");
     badgeEl.style.setProperty("--profile-badge-size",profileBadgeSize(appData.profile.badgeSize)+"px");
     nameEl.childNodes[0].nodeType === 3
       ? (nameEl.childNodes[0].textContent = (appData.profile.name || 'H4SX Gateway') + ' ')
@@ -1341,6 +1344,7 @@
     renderAdminLinkList();
     renderAdminMusicList();
     document.getElementById('editProfileBadgeGif').value=appData.profile.badgeGif||'';
+    document.getElementById('editProfileBadgeType').value=['auto','image','video'].includes(appData.profile.badgeType)?appData.profile.badgeType:'auto';
     document.getElementById('editProfileBadgeSize').value=profileBadgeSize(appData.profile.badgeSize);
     previewProfileBadge();
     document.getElementById('editName').value = appData.profile.name;
@@ -2289,7 +2293,7 @@
     
     ['linkVerified','linkVerifiedStyle','linkVerifiedColor','linkVerifiedGif','linkTitle'].forEach(id=>document.getElementById(id).addEventListener('input',updateLinkBadgePreview));
     ['linkCustomStyle','linkCardColor','linkTextColor','linkBorderColor','linkCardOpacity','linkTitle'].forEach(id=>document.getElementById(id).addEventListener('input',previewLinkStyle));
-    ['editProfileBadgeGif','editProfileBadgeSize'].forEach(id=>document.getElementById(id).addEventListener('input',previewProfileBadge));
+    ['editProfileBadgeGif','editProfileBadgeSize','editProfileBadgeType'].forEach(id=>document.getElementById(id).addEventListener('input',previewProfileBadge));
     document.getElementById('resetProfileBadgeSize').addEventListener('click',()=>{document.getElementById('editProfileBadgeSize').value=22;previewProfileBadge();});
     document.getElementById('saveLinkBtn').addEventListener('click', ()=>{
       if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
@@ -2332,7 +2336,7 @@
       const badgeGif=document.getElementById('editProfileBadgeGif').value.trim();
       if(badgeGif&&!gifCandidates(badgeGif).length){showToast('GIF profil mesti guna link HTTPS yang sah.','warning');return;}
       if(!currentUser){ showToast('Sila login admin!', 'warning'); return; }
-      const profileData = { ...appData.profile,badgeGif,badgeSize:profileBadgeSize(document.getElementById("editProfileBadgeSize").value),
+      const profileData = { ...appData.profile,badgeGif,badgeType:document.getElementById("editProfileBadgeType").value,badgeSize:profileBadgeSize(document.getElementById("editProfileBadgeSize").value),
         name: document.getElementById('editName').value.trim() || 'H4SX Gateway',
         handle: document.getElementById('editHandle').value.trim() || '@h4sx',
         bio: document.getElementById('editBio').value.trim(),
