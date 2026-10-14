@@ -186,8 +186,6 @@
   const _cachedStartData = loadCachedData();
   let appData = _cachedStartData || JSON.parse(JSON.stringify(DEFAULT_DATA));
   let _usingCachedData = !!_cachedStartData;
-  let currentCategory = 'all';
-  let searchQuery = '';
   let firebaseApp = null;
   let firebaseDb = null;
   let firebaseAuth = null;
@@ -565,27 +563,12 @@
     document.getElementById('totalCats').textContent = cats.length;
   }
   
-  function renderCategoryTabs(){
-    const container = document.getElementById('categoryTabs');
+  function renderCategoryOptions(){
     const cats = [...new Set(appData.links.map(l=>l.category).filter(Boolean))];
-    let html = '<button class="tab-btn '+(currentCategory==='all'?'active':'')+'" data-category="all">Semua</button>';
-    cats.forEach(cat=>{
-      html += '<button class="tab-btn '+(currentCategory===cat?'active':'')+'" data-category="'+cat+'">'+cat+'</button>';
-    });
-    container.innerHTML = html;
-    
-    container.querySelectorAll('.tab-btn').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        currentCategory = btn.dataset.category;
-        renderCategoryTabs();
-        renderLinks();
-      });
-    });
-    
     const datalist = document.getElementById('categoryList');
-    datalist.innerHTML = cats.map(c=>'<option value="'+c+'">').join('');
+    datalist.innerHTML = cats.map(c=>'<option value="'+escapeHtml(c)+'">').join('');
   }
-  
+
   let _linksRenderedOnce = false;
   function isLinkScheduleActive(link){
     const now = Date.now();
@@ -737,30 +720,13 @@
     const container = document.getElementById('linksContainer');
     let filtered = orderedLinks().filter(isLinkScheduleActive);
     
-    if(currentCategory !== 'all'){
-      filtered = filtered.filter(l=>l.category === currentCategory);
-    }
-    
-    if(searchQuery.trim()){
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(l=>
-        l.title.toLowerCase().includes(q) ||
-        (l.desc||'').toLowerCase().includes(q) ||
-        l.url.toLowerCase().includes(q)
-      );
-    }
-    
     if(filtered.length === 0){
       container.innerHTML = '<div class="no-results"><div style="font-size:40px;margin-bottom:8px">Tiada pautan dijumpai</div></div>';
       return;
     }
 
-    // Featured/pinned links get their own spotlight section — only on the
-    // "Semua" tab with no active search, so they don't duplicate or vanish
-    // confusingly while filtering.
-    const showPinnedSection = currentCategory === 'all' && !searchQuery.trim();
-    const pinned = showPinnedSection ? filtered.filter(l=>l.pinned) : [];
-    const rest = showPinnedSection ? filtered.filter(l=>!l.pinned) : filtered;
+    const pinned = filtered.filter(l=>l.pinned);
+    const rest = filtered.filter(l=>!l.pinned);
 
     let html = '';
     if(pinned.length){
@@ -769,29 +735,17 @@
       html += '</div>';
     }
     
-    const grouped = Object.create(null);
-    rest.forEach(l=>{
-      const cat = l.category || 'Lain-lain';
-      if(!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(l);
-    });
-    
-    Object.keys(grouped).forEach((cat, idx)=>{
-      html += '<section class="link-group">';
-      if(currentCategory === 'all' && Object.keys(grouped).length > 1){
-        html += '<h3 class="category-title">'+escapeHtml(cat)+'</h3>';
-      }
+    if(rest.length){
       html += '<div class="link-grid">';
-      grouped[cat].forEach((link, i)=>{
-        html += buildLinkCardHtml(link, (idx*0.1 + i*0.08)+0.2, false);
+      rest.forEach((link, i)=>{
+        html += buildLinkCardHtml(link, i*0.08+0.2, false);
       });
-      html += '</div></section>';
-    });
-    
+      html += '</div>';
+    }
+
     container.innerHTML = html;
     // Only play the staggered fade-up entrance on the very first paint —
-    // re-running it on every search keystroke/filter click just adds
-    // jank for no visual benefit.
+    // Later data updates keep the cards steady.
     container.classList.toggle('no-entrance', _linksRenderedOnce);
     _linksRenderedOnce = true;
     
@@ -1156,7 +1110,7 @@
     try { applyTheme(); } catch(e) { console.error('applyTheme error:', e); }
     try { renderProfile(); } catch(e) { console.error('renderProfile error:', e); }
     try { renderStats(); } catch(e) { console.error('renderStats error:', e); }
-    try { renderCategoryTabs(); } catch(e) { console.error('renderCategoryTabs error:', e); }
+    try { renderCategoryOptions(); } catch(e) { console.error('renderCategoryOptions error:', e); }
     try { renderLinks(); } catch(e) { console.error('renderLinks error:', e); }
     try { renderSocials(); } catch(e) { console.error('renderSocials error:', e); }
     try { updateHotCounter(); } catch(e) { console.error('updateHotCounter error:', e); }
@@ -1271,7 +1225,7 @@
       document.getElementById('linkTitle').value = '';
       document.getElementById('linkUrl').value = '';
       document.getElementById('linkDesc').value = '';
-      document.getElementById('linkCategory').value = currentCategory === 'all' ? 'Utama' : currentCategory;
+      document.getElementById('linkCategory').value = 'Utama';
       document.getElementById('linkIcon').value = '';
       document.getElementById('linkIconUrl').value = '';
       fillLinkStyle();
@@ -2010,21 +1964,6 @@
       appData.settings.theme = newTheme;
       applyTheme();
       if(currentUser && isFirebaseReady){ saveToFirebase('settings/theme', newTheme).catch(()=>{}); }
-    });
-    
-    let _searchDebounce = null;
-    let _searchAchvFired = false;
-    document.getElementById('searchInput').addEventListener('input', (e)=>{
-      const val = e.target.value;
-      if(val.trim() && !_searchAchvFired){
-        _searchAchvFired = true;
-        window.checkAchievements('search');
-      }
-      clearTimeout(_searchDebounce);
-      _searchDebounce = setTimeout(()=>{
-        searchQuery = val;
-        renderLinks();
-      }, 180);
     });
     
     const shareBtn = document.getElementById('shareBtn');
