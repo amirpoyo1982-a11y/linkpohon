@@ -735,13 +735,24 @@
       html += '</div>';
     }
     
-    if(rest.length){
+    const grouped = Object.create(null);
+    rest.forEach(link=>{
+      const category = link.category || 'Lain-lain';
+      if(!grouped[category]) grouped[category] = [];
+      grouped[category].push(link);
+    });
+    const categories = Object.keys(grouped);
+    categories.forEach((category, idx)=>{
+      html += '<section class="link-group">';
+      if(categories.length > 1){
+        html += '<h3 class="category-title">'+escapeHtml(category)+'</h3>';
+      }
       html += '<div class="link-grid">';
-      rest.forEach((link, i)=>{
-        html += buildLinkCardHtml(link, i*0.08+0.2, false);
+      grouped[category].forEach((link, i)=>{
+        html += buildLinkCardHtml(link, idx*0.1+i*0.08+0.2, false);
       });
-      html += '</div>';
-    }
+      html += '</div></section>';
+    });
 
     container.innerHTML = html;
     // Only play the staggered fade-up entrance on the very first paint —
