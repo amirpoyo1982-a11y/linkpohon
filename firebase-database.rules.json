@@ -1,0 +1,44 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "gateway_data": {
+      ".read": false,
+      ".write": false,
+      "profile": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === 'a4vUvYkVWEULB1nEcSVIlbkbnFs2'"
+      },
+      "settings": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === 'a4vUvYkVWEULB1nEcSVIlbkbnFs2'"
+      },
+      "links": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === 'a4vUvYkVWEULB1nEcSVIlbkbnFs2'",
+        "$linkId": {
+          "clicks": {
+            ".write": "auth != null && auth.uid === 'a4vUvYkVWEULB1nEcSVIlbkbnFs2'",
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          }
+        }
+      },
+      "music": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === 'a4vUvYkVWEULB1nEcSVIlbkbnFs2'"
+      },
+      "presence": {
+        ".read": false,
+        ".write": false
+      },
+      "stats": {
+        ".read": false,
+        ".write": "auth != null && auth.uid === 'a4vUvYkVWEULB1nEcSVIlbkbnFs2'"
+      },
+      "activity": {
+        ".read": false,
+        ".write": "auth != null && auth.uid === 'a4vUvYkVWEULB1nEcSVIlbkbnFs2'"
+      }
+    }
+  }
+}

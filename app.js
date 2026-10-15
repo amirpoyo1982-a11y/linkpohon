@@ -265,42 +265,44 @@
   }
   
   function loadDataFromFirebase(){
-    const ref = firebaseDb.ref('gateway_data');
-    ref.on('value', (snapshot)=>{
-      const data = snapshot.val();
-      if(data){
-        appData = {
-          profile:  data.profile  || DEFAULT_DATA.profile,
-          settings: mergeSettings(data.settings),
-          links: normalizeCollection(data.links),
-          music: normalizeCollection(data.music)
-        };
-        // 🆕 Fresh data confirmed — cache it for next visit's instant paint,
-        // and fade out the "syncing" bar if it was showing.
+    // Read only the public branches. Realtime Database rules do not filter
+    // parent reads, so gateway_data itself may correctly remain private.
+    const pending = new Set(['profile', 'settings', 'links', 'music']);
+    let reportedError = false;
+    let renderQueued = false;
+    function finishBranch(key){
+      pending.delete(key);
+      if(!pending.size) hideSyncIndicator();
+    }
+    function scheduleRender(){
+      if(renderQueued) return;
+      renderQueued = true;
+      Promise.resolve().then(()=>{
+        renderQueued = false;
         cacheData(appData);
-        _usingCachedData = false;
-        hideSyncIndicator();
         renderAll();
-        // Removed auto-play to comply with browser autoplay policy
-        // User must click play button first
-      }else{
-        const rtdbData = {
-          profile:  DEFAULT_DATA.profile,
-          settings: DEFAULT_DATA.settings,
-          links:    Object.fromEntries(DEFAULT_DATA.links.map(l=>{ const {id,...rest}=l; return [id||Date.now().toString(), rest]; })),
-          music:    {}
-        };
-        ref.set(rtdbData).catch(e=>console.error('Write default error:', e));
-        hideSyncIndicator();
-      }
-    }, (error)=>{
-      console.error('Firebase read error:', error);
-      hideSyncIndicator();
-      const errMsg = error.code === 'PERMISSION_DENIED'
-        ? 'Akses ditolak — semak Firebase Realtime Database Rules'
-        : 'Gagal baca data: ' + (error.message || error.code || error);
-      showToast(errMsg, 'error');
-    });
+      });
+    }
+    for(const key of [...pending]){
+      firebaseDb.ref('gateway_data/' + key).on('value', (snapshot)=>{
+        const value = snapshot.val();
+        if(key === 'profile') appData.profile = value || DEFAULT_DATA.profile;
+        else if(key === 'settings') appData.settings = mergeSettings(value);
+        else appData[key] = normalizeCollection(value);
+        _usingCachedData = false;
+        finishBranch(key);
+        scheduleRender();
+      }, (error)=>{
+        console.error('Firebase read error (' + key + '):', error);
+        finishBranch(key);
+        if(reportedError) return;
+        reportedError = true;
+        const errMsg = error.code === 'PERMISSION_DENIED'
+          ? 'Akses baca ' + key + ' ditolak — semak Realtime Database Rules projek mxioa-a487b.'
+          : 'Gagal baca data: ' + (error.message || error.code || error);
+        showToast(errMsg, 'error');
+      });
+    }
   }
   
   function saveToFirebase(path, data){
@@ -318,7 +320,7 @@
         .catch(e=>{
           console.error('[Save Error]', e.code, e.message);
           const msg = e.code === 'PERMISSION_DENIED'
-            ? 'Akses ditolak — semak Firebase Rules (write: auth != null)'
+            ? 'Akses simpan ditolak — semak UID admin dalam Realtime Database Rules projek mxioa-a487b.'
             : 'Gagal simpan: ' + (e.message || e.code);
           showToast(msg, 'error');
           throw e;
