@@ -19,7 +19,9 @@ body.sticker-edit .h4sx-sticker-fab{display:none}
 .sticker-panel .hint{color:var(--muted);font-size:12px;line-height:1.5;margin:0 0 10px}
 .sticker-panel .row{display:flex;gap:8px;margin-bottom:10px}
 .sticker-panel .row>input{flex:1;min-width:0}
-.sticker-panel .sl{display:grid;grid-template-columns:64px 1fr 46px;align-items:center;gap:8px;margin:6px 0;color:var(--muted);font-size:12px}
+.sticker-panel .sl{display:grid;grid-template-columns:78px 1fr 46px 32px;align-items:center;gap:8px;margin:6px 0;color:var(--muted);font-size:12px}
+.sticker-panel .rs{width:32px;height:32px;padding:0;border-radius:9px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:16px;line-height:1;cursor:pointer}
+.sticker-panel .rs:disabled,.sticker-panel .btn:disabled{opacity:.4;cursor:default}
 .sticker-panel input[type=range]{width:100%;accent-color:var(--accent)}
 .sticker-panel .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .sticker-thumbs{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:thin}

@@ -92,11 +92,14 @@
       '<p class="hint">Tampal link HTTPS gambar/GIF/PNG/WebP, tekan Tambah. Seret sticker untuk alih posisi. Pilih sticker, kemudian tarik bulatan biru di tepi untuk regang.</p>'+
       '<div class="row"><input class="form-input" id="stkUrl" type="url" placeholder="https://.../sticker.png"><button type="button" class="btn btn-primary" id="stkAdd">Tambah</button></div>'+
       '<div class="sticker-thumbs" id="stkThumbs"></div>'+
-      '<label class="sl">Saiz<input id="stkW" type="range" min="4" max="90" step="1"><output id="stkWv"></output></label>'+
-      '<label class="sl">Putar<input id="stkR" type="range" min="-180" max="180" step="1"><output id="stkRv"></output></label>'+
-      '<label class="sl">Regang ↔<input id="stkX" type="range" min="0.2" max="4" step="0.05"><output id="stkXv"></output></label>'+
-      '<label class="sl">Regang ↕<input id="stkY" type="range" min="0.2" max="4" step="0.05"><output id="stkYv"></output></label>'+
-      '<div class="acts"><button type="button" class="btn btn-danger btn-sm" id="stkDel">Padam</button>'+
+      '<label class="sl">Saiz<input id="stkW" type="range" min="4" max="90" step="1"><output id="stkWv"></output><button type="button" class="rs" data-rs="w" title="Reset saiz">↺</button></label>'+
+      '<label class="sl">Putar<input id="stkR" type="range" min="-180" max="180" step="1"><output id="stkRv"></output><button type="button" class="rs" data-rs="r" title="Reset putaran">↺</button></label>'+
+      '<label class="sl">Regang ↔<input id="stkX" type="range" min="0.2" max="4" step="0.05"><output id="stkXv"></output><button type="button" class="rs" data-rs="sx" title="Reset regang kiri kanan">↺</button></label>'+
+      '<label class="sl">Regang ↕<input id="stkY" type="range" min="0.2" max="4" step="0.05"><output id="stkYv"></output><button type="button" class="rs" data-rs="sy" title="Reset regang atas bawah">↺</button></label>'+
+      '<div class="acts"><button type="button" class="btn btn-secondary btn-sm" id="stkCopy">Salin</button>'+
+      '<button type="button" class="btn btn-secondary btn-sm" id="stkResetAll">Reset semua</button>'+
+      '<button type="button" class="btn btn-secondary btn-sm" id="stkResetPos">Reset posisi</button>'+
+      '<button type="button" class="btn btn-danger btn-sm" id="stkDel">Padam</button>'+
       '<button type="button" class="btn btn-secondary btn-sm" id="stkCancel">Batal</button>'+
       '<button type="button" class="btn btn-primary btn-sm" id="stkSave">Simpan</button></div>';
     document.body.appendChild(panel);
@@ -115,6 +118,10 @@
     $('#stkDel').onclick=function(){if(!selected)return;delete draft[selected];selected=null;render(draft);syncControls();};
     $('#stkCancel').onclick=function(){stopEdit();};
     $('#stkSave').onclick=save;
+    panel.addEventListener('click',function(e){var b=e.target.closest('[data-rs]');if(b)resetProp(b.dataset.rs);});
+    $('#stkCopy').onclick=copySticker;
+    $('#stkResetAll').onclick=function(){resetProp('all');};
+    $('#stkResetPos').onclick=resetPos;
   }
   function startEdit(){
     if(editing||!panel)return;
@@ -142,11 +149,31 @@
     });
     var s=draft[selected],w=$('#stkW'),r=$('#stkR'),x=$('#stkX'),y=$('#stkY');
     w.disabled=r.disabled=x.disabled=y.disabled=$('#stkDel').disabled=!s;
+    panel.querySelectorAll('[data-rs],#stkCopy,#stkResetAll,#stkResetPos').forEach(function(b){b.disabled=!s;});
     if(s){w.value=s.w;r.value=s.r;x.value=s.sx||1;y.value=s.sy||1;$('#stkWv').textContent=Math.round(s.w)+'%';$('#stkRv').textContent=Math.round(s.r)+'\u00b0';$('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';$('#stkYv').textContent=Math.round((s.sy||1)*100)+'%';}
     else{$('#stkWv').textContent='';$('#stkRv').textContent='';$('#stkXv').textContent='';$('#stkYv').textContent='';}
     layer.querySelectorAll('.h4sx-sticker').forEach(function(el){el.classList.toggle('selected',el.dataset.id===selected);});
   }
   function select(id){selected=id;syncControls();}
+  var RESET={w:22,r:0,sx:1,sy:1};
+  function resetProp(k){
+    var s=draft&&draft[selected];if(!s)return;
+    if(k==='all')Object.keys(RESET).forEach(function(p){s[p]=RESET[p];});
+    else if(k in RESET)s[k]=RESET[k];
+    refreshEl(selected);syncControls();
+  }
+  function resetPos(){
+    var s=draft&&draft[selected];if(!s)return;
+    s.x=50;s.y=Math.round(Math.max(40,window.scrollY-(wrap.getBoundingClientRect().top+window.scrollY)+140));
+    refreshEl(selected);
+  }
+  function copySticker(){
+    var s=draft&&draft[selected];if(!s)return;
+    if(Object.keys(draft).length>=MAX){toast('Maksimum '+MAX+' sticker.','warning');return;}
+    var id=uid(),c=JSON.parse(JSON.stringify(s));
+    c.x=Math.min(130,s.x+5);c.y=Math.min(6000,s.y+30);
+    draft[id]=c;selected=id;render(draft);toast('Sticker disalin');
+  }
   function addSticker(){
     var inp=$('#stkUrl'),url=safeUrl(inp.value);
     if(!url){toast('Link mesti HTTPS dan sah.','warning');return;}
