@@ -1,0 +1,26 @@
+/* H4SX profile: custom name colour + badges */
+body .profile-card #profileName.has-name-color,body.clean-gateway .profile-card #profileName.has-name-color{color:var(--name-a)!important;-webkit-text-fill-color:currentColor!important;background:none!important;text-shadow:0 2px 14px rgba(0,0,0,.35)}
+body .profile-card #profileName.has-name-gradient,body.clean-gateway .profile-card #profileName.has-name-gradient{background:linear-gradient(100deg,var(--name-a),var(--name-b),var(--name-a))!important;background-size:200% auto!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;-webkit-text-fill-color:transparent!important;text-shadow:none;filter:drop-shadow(0 2px 10px rgba(0,0,0,.35))}
+body:not(.mobile-lite):not(.effects-no-motion) #profileName.has-name-gradient{animation:nameFlow 6s linear infinite}
+@keyframes nameFlow{to{background-position:200% center}}
+
+.h4sx-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:14px auto 0;max-width:460px}
+.h4sx-badges:empty{display:none}
+.h4sx-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 12px 5px 7px;border-radius:999px;border:1px solid var(--bc,rgba(255,255,255,.2));background:linear-gradient(135deg,var(--bg-a,rgba(255,255,255,.08)),var(--bg-b,rgba(255,255,255,.03)));color:var(--bt,#fff);font:700 12px/1 Archivo,sans-serif;letter-spacing:.03em;box-shadow:0 6px 18px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.1);-webkit-user-select:none;user-select:none;transition:transform .2s}
+.h4sx-badge:hover{transform:translateY(-2px)}
+.h4sx-badge .bi{display:grid;place-items:center;width:22px;height:22px;flex:0 0 22px;border-radius:50%;background:var(--bi,rgba(255,255,255,.12))}
+.h4sx-badge .bi svg{width:14px;height:14px;display:block}
+.h4sx-badge.owner{--bc:rgba(245,196,81,.6);--bg-a:rgba(245,196,81,.22);--bg-b:rgba(245,196,81,.06);--bt:#ffe9ad;--bi:linear-gradient(135deg,#f9d976,#d99a1e)}
+.h4sx-badge.dev{--bc:rgba(114,232,255,.5);--bg-a:rgba(114,232,255,.18);--bg-b:rgba(155,92,255,.1);--bt:#cdf6ff;--bi:linear-gradient(135deg,#38bdf8,#8b5cf6)}
+.h4sx-badge.html{--bc:rgba(241,101,41,.55);--bg-a:rgba(241,101,41,.2);--bg-b:rgba(241,101,41,.05);--bt:#ffd5c2;--bi:rgba(255,255,255,.14)}
+.h4sx-badge.css{--bc:rgba(33,150,243,.55);--bg-a:rgba(33,150,243,.2);--bg-b:rgba(33,150,243,.05);--bt:#cfe8ff;--bi:rgba(255,255,255,.14)}
+[data-theme=light] .h4sx-badge{--bt:#2b1a3a}
+body.mobile-lite .h4sx-badge{box-shadow:none}
+
+/* Admin form */
+.h4sx-pstyle{padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--accent-soft);margin:6px 0 16px}
+.h4sx-pstyle h4{margin:0 0 10px;font:800 14px Syne,sans-serif}
+.h4sx-pstyle .pr{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:8px 0;font-size:13px}
+.h4sx-pstyle input[type=color]{width:46px;height:38px;padding:3px;border:1px solid var(--border);border-radius:9px;background:var(--bg2);cursor:pointer}
+.h4sx-pstyle label.ck{display:flex;align-items:center;gap:8px;min-height:36px;font-size:13px}
+.h4sx-pstyle input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
