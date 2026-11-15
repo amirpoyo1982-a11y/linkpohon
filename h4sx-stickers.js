@@ -2,7 +2,7 @@
 (function(){
   'use strict';
   var MAX=40, CACHE='h4sx_data_cache', PATH='gateway_data/settings/stickers';
-  var layer=null, wrap=null, ref=null, saved={}, draft=null, selected=null, editing=false;
+  var layer=null, wrap=null, ref=null, saved={}, draft=null, selected=null, editing=false, editDevice=null, originalWrapStyle=null;
 
   function safeUrl(v){
     try{var u=new URL(String(v||'').trim());return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch(e){return '';}
@@ -22,8 +22,9 @@
     return out;
   }
   /* Device layouts: d = PC (base fields), t = tablet, m = mobile (stored in s.o) */
-  var REF_W=720, DEVNAME={d:'PC',t:'Tablet',m:'Mobile'};
-  function dev(){var w=window.innerWidth;return w>=1024?'d':w>=600?'t':'m';}
+  var REF_W=720, DEVNAME={d:'PC',t:'Tablet',m:'Phone'}, PREVIEW_W={t:768,m:390};
+  function viewportDev(){var w=window.innerWidth;return w>=1024?'d':w>=600?'t':'m';}
+  function dev(){return editing&&editDevice?editDevice:viewportDev();}
   function wrapW(){return (wrap&&wrap.getBoundingClientRect().width)||REF_W;}
   function defW(){return dev()==='d'?22:num(22*REF_W/wrapW(),4,90,22);}
   function eff(s){
@@ -116,7 +117,8 @@
     panel=document.createElement('div');panel.className='sticker-panel';panel.hidden=true;
     panel.innerHTML='<h3>Sticker H4SX</h3>'+
       '<p class="hint" id="stkDev"></p>'+
-      '<p class="hint">Setiap peranti ada layout sendiri: buka halaman ini di PC, Tablet atau Mobile (atau kecilkan tingkap) untuk edit layout peranti itu. Peranti yang belum diedit guna saiz auto.</p>'+
+      '<label class="device-picker" for="stkDevice">Layout peranti<select class="form-input" id="stkDevice"><option value="d">PC</option><option value="t">Tablet</option><option value="m">Phone</option></select></label>'+
+      '<p class="hint">Pilih PC, Tablet atau Phone di sini untuk edit semua layout terus dari PC. Preview akan ikut lebar peranti yang dipilih. Peranti yang belum diedit guna saiz auto.</p>'+
       '<p class="hint">Tampal link HTTPS gambar/GIF/PNG/WebP, tekan Tambah. Seret sticker untuk alih posisi. Pilih sticker, kemudian tarik bulatan biru di tepi untuk regang.</p>'+
       '<div class="row"><input class="form-input" id="stkUrl" type="url" placeholder="https://.../sticker.png"><button type="button" class="btn btn-primary" id="stkAdd">Tambah</button></div>'+
       '<div class="sticker-thumbs" id="stkThumbs"></div>'+
@@ -138,6 +140,12 @@
       b.addEventListener('click',startEdit);tab.insertBefore(b,tab.firstChild);
     }
     $('#stkAdd').onclick=addSticker;
+    $('#stkDevice').addEventListener('change',function(){
+      editDevice=this.value;
+      setDevicePreview();
+      render(draft);
+      syncControls();
+    });
     $('#stkUrl').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addSticker();}});
     $('#stkW').oninput=function(){var s=selected&&W(selected);if(!s)return;s.w=+this.value;refreshEl(selected);syncControls();};
     $('#stkR').oninput=function(){var s=selected&&W(selected);if(!s)return;s.r=+this.value;refreshEl(selected);syncControls();};
@@ -155,14 +163,23 @@
     if(editing||!panel)return;
     var m=document.getElementById('adminModal');
     if(m&&m.classList.contains('active')){var c=document.getElementById('closeModal');if(c)c.click();}
-    draft=JSON.parse(JSON.stringify(saved));selected=null;editing=true;
+    draft=JSON.parse(JSON.stringify(saved));selected=null;editDevice=viewportDev();editing=true;
+    originalWrapStyle={width:wrap.style.width,maxWidth:wrap.style.maxWidth,boxSizing:wrap.style.boxSizing};
+    $('#stkDevice').value=editDevice;setDevicePreview();
     document.body.classList.add('sticker-edit');panel.hidden=false;
     render(draft);syncControls();
   }
   function stopEdit(){
-    editing=false;draft=null;selected=null;
+    editing=false;draft=null;selected=null;editDevice=null;
+    if(originalWrapStyle){wrap.style.width=originalWrapStyle.width;wrap.style.maxWidth=originalWrapStyle.maxWidth;wrap.style.boxSizing=originalWrapStyle.boxSizing;originalWrapStyle=null;}
     document.body.classList.remove('sticker-edit');if(panel)panel.hidden=true;
     render(saved);
+  }
+  function setDevicePreview(){
+    if(!editing||!wrap)return;
+    var width=PREVIEW_W[editDevice];
+    if(width){wrap.style.width=width+'px';wrap.style.maxWidth='none';wrap.style.boxSizing='border-box';}
+    else if(originalWrapStyle){wrap.style.width=originalWrapStyle.width;wrap.style.maxWidth=originalWrapStyle.maxWidth;wrap.style.boxSizing=originalWrapStyle.boxSizing;}
   }
   function refreshEl(id){
     var el=layer.querySelector('[data-id="'+id+'"]');if(el&&draft[id])place(el,R(id));
@@ -176,7 +193,7 @@
       b.onclick=function(){select(id);};box.appendChild(b);
     });
     var s=draft[selected]?R(selected):null,w=$('#stkW'),r=$('#stkR'),x=$('#stkX'),y=$('#stkY');
-    $('#stkDev').textContent='Layout: '+DEVNAME[dev()]+' ('+window.innerWidth+'px)';
+    $('#stkDev').textContent='Layout: '+DEVNAME[dev()]+' · Preview '+Math.round(wrapW())+'px';
     w.disabled=r.disabled=x.disabled=y.disabled=$('#stkDel').disabled=!s;
     panel.querySelectorAll('[data-rs],#stkCopy,#stkResetAll,#stkResetPos').forEach(function(b){b.disabled=!s;});
     if(s){w.value=s.w;r.value=s.r;x.value=s.sx||1;y.value=s.sy||1;$('#stkWv').textContent=Math.round(s.w)+'%';$('#stkRv').textContent=Math.round(s.r)+'\u00b0';$('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';$('#stkYv').textContent=Math.round((s.sy||1)*100)+'%';}

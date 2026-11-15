@@ -17,6 +17,8 @@ body.sticker-edit .h4sx-sticker-fab{display:none}
 .sticker-panel[hidden]{display:none}
 .sticker-panel h3{margin:0 0 8px;font:800 15px Syne,sans-serif}
 .sticker-panel .hint{color:var(--muted);font-size:12px;line-height:1.5;margin:0 0 10px}
+.sticker-panel .device-picker{display:grid;gap:6px;margin:0 0 10px;font-weight:700}
+.sticker-panel .device-picker .form-input{padding:9px 10px}
 .sticker-panel .row{display:flex;gap:8px;margin-bottom:10px}
 .sticker-panel .row>input{flex:1;min-width:0}
 .sticker-panel .sl{display:grid;grid-template-columns:78px 1fr 46px 32px;align-items:center;gap:8px;margin:6px 0;color:var(--muted);font-size:12px}
