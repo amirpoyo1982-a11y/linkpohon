@@ -21,6 +21,7 @@
   function place(el,s){
     el.style.left=s.x+'%';el.style.top=s.y+'px';el.style.width=s.w+'%';
     el.style.transform='translate(-50%,0) rotate('+s.r+'deg) scaleX('+(s.sx||1)+') scaleY('+(s.sy||1)+')';
+    el.style.setProperty('--isx',String(1/(s.sx||1)));el.style.setProperty('--isy',String(1/(s.sy||1)));
   }
   function build(id,s){
     var el=document.createElement('div');
@@ -28,7 +29,9 @@
     var img=document.createElement('img');
     img.alt='';img.decoding='async';img.loading='lazy';img.draggable=false;img.referrerPolicy='no-referrer';
     img.src=s.url;img.addEventListener('error',function(){el.style.display='none';});
-    el.appendChild(img);place(el,s);return el;
+    el.appendChild(img);
+    if(editing)['l','r','t','b'].forEach(function(k){var h=document.createElement('i');h.className='stk-h '+k;h.dataset.h=k;el.appendChild(h);});
+    place(el,s);return el;
   }
   function render(data){
     if(!layer)return;
@@ -86,7 +89,7 @@
     fab.addEventListener('click',startEdit);document.body.appendChild(fab);
     panel=document.createElement('div');panel.className='sticker-panel';panel.hidden=true;
     panel.innerHTML='<h3>Sticker H4SX</h3>'+
-      '<p class="hint">Tampal link HTTPS gambar/GIF/PNG/WebP, tekan Tambah. Seret sticker pada halaman untuk alih posisi.</p>'+
+      '<p class="hint">Tampal link HTTPS gambar/GIF/PNG/WebP, tekan Tambah. Seret sticker untuk alih posisi. Pilih sticker, kemudian tarik bulatan biru di tepi untuk regang.</p>'+
       '<div class="row"><input class="form-input" id="stkUrl" type="url" placeholder="https://.../sticker.png"><button type="button" class="btn btn-primary" id="stkAdd">Tambah</button></div>'+
       '<div class="sticker-thumbs" id="stkThumbs"></div>'+
       '<label class="sl">Saiz<input id="stkW" type="range" min="4" max="90" step="1"><output id="stkWv"></output></label>'+
@@ -170,8 +173,41 @@
       });
       function end(e){if(pid!==e.pointerId)return;pid=null;el.classList.remove('dragging');}
       el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+      bindHandles(el,id);
     });
     syncControls();
+  }
+  function bindHandles(el,id){
+    el.querySelectorAll('.stk-h').forEach(function(h){
+      var pid=null,sx,sy,s0,W0,H0,rw,c,n,side=h.dataset.h,horiz=side==='l'||side==='r',dir=(side==='r'||side==='b')?1:-1;
+      h.addEventListener('pointerdown',function(e){
+        e.preventDefault();e.stopPropagation();pid=e.pointerId;h.setPointerCapture(pid);
+        if(selected!==id)select(id);
+        s0=JSON.parse(JSON.stringify(draft[id]));sx=e.clientX;sy=e.clientY;
+        W0=Math.max(20,el.offsetWidth);H0=Math.max(20,el.offsetHeight);
+        rw=wrap.getBoundingClientRect().width||1;
+        var a=s0.r*Math.PI/180;c=Math.cos(a);n=Math.sin(a);
+      });
+      h.addEventListener('pointermove',function(e){
+        if(pid!==e.pointerId)return;
+        var dx=e.clientX-sx,dy=e.clientY-sy,s=draft[id],base=horiz?W0:H0,k=horiz?'sx':'sy';
+        var d=horiz?(dx*c+dy*n):(-dx*n+dy*c);
+        var start=s0[k]||1,next=Math.min(4,Math.max(0.2,start+dir*d/base));
+        var move=dir*(next-start)*base/2;
+        var vx=horiz?c*move:-n*move,vy=horiz?n*move:c*move;
+        s[k]=Math.round(next*100)/100;
+        s.x=Math.round(Math.min(130,Math.max(-30,s0.x+vx/rw*100))*10)/10;
+        s.y=Math.round(Math.min(6000,Math.max(-200,s0.y+vy)));
+        place(el,s);syncValues();
+      });
+      function end(e){if(pid===e.pointerId)pid=null;}
+      h.addEventListener('pointerup',end);h.addEventListener('pointercancel',end);
+    });
+  }
+  function syncValues(){
+    var s=draft[selected];if(!s)return;
+    $('#stkX').value=s.sx||1;$('#stkY').value=s.sy||1;
+    $('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';$('#stkYv').textContent=Math.round((s.sy||1)*100)+'%';
   }
   function save(){
     var data=clean(draft),btn=$('#stkSave');btn.disabled=true;

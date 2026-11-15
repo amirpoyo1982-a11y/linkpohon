@@ -25,3 +25,11 @@ body.sticker-edit .h4sx-sticker-fab{display:none}
 .sticker-thumbs{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:thin}
 .sticker-thumbs button{flex:0 0 54px;height:54px;border-radius:12px;border:2px solid var(--border);background:var(--card) center/contain no-repeat;cursor:pointer;padding:0}
 .sticker-thumbs button.on{border-color:#72e8ff}
+/* Drag handles (selected sticker only). Counter-scaled so they stay round. */
+.stk-h{display:none;position:absolute;width:16px;height:16px;border-radius:50%;background:#72e8ff;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);touch-action:none;z-index:3;transform:translate(-50%,-50%) scale(var(--isx,1),var(--isy,1))}
+.stk-h::after{content:'';position:absolute;inset:-14px;border-radius:50%}
+body.sticker-edit .h4sx-sticker.selected .stk-h{display:block;pointer-events:auto}
+.stk-h.l{left:0;top:50%;cursor:ew-resize}
+.stk-h.r{left:100%;top:50%;cursor:ew-resize}
+.stk-h.t{left:50%;top:0;cursor:ns-resize}
+.stk-h.b{left:50%;top:100%;cursor:ns-resize}
