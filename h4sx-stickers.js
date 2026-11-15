@@ -14,13 +14,13 @@
     Object.keys(raw).forEach(function(id){
       var s=raw[id],url=s&&safeUrl(s.url);
       if(!url||n>=MAX||!/^[\w-]{1,40}$/.test(id))return;
-      n++;out[id]={url:url,x:num(s.x,-30,130,50),y:num(s.y,-200,6000,120),w:num(s.w,4,90,22),r:num(s.r,-180,180,0)};
+      n++;out[id]={url:url,x:num(s.x,-30,130,50),y:num(s.y,-200,6000,120),w:num(s.w,4,90,22),r:num(s.r,-180,180,0),sx:num(s.sx,0.2,4,1)};
     });
     return out;
   }
   function place(el,s){
     el.style.left=s.x+'%';el.style.top=s.y+'px';el.style.width=s.w+'%';
-    el.style.transform='translate(-50%,0) rotate('+s.r+'deg)';
+    el.style.transform='translate(-50%,0) rotate('+s.r+'deg) scaleX('+(s.sx||1)+')';
   }
   function build(id,s){
     var el=document.createElement('div');
@@ -91,6 +91,7 @@
       '<div class="sticker-thumbs" id="stkThumbs"></div>'+
       '<label class="sl">Saiz<input id="stkW" type="range" min="4" max="90" step="1"><output id="stkWv"></output></label>'+
       '<label class="sl">Putar<input id="stkR" type="range" min="-180" max="180" step="1"><output id="stkRv"></output></label>'+
+      '<label class="sl">Regang<input id="stkX" type="range" min="0.2" max="4" step="0.05"><output id="stkXv"></output></label>'+
       '<div class="acts"><button type="button" class="btn btn-danger btn-sm" id="stkDel">Padam</button>'+
       '<button type="button" class="btn btn-secondary btn-sm" id="stkCancel">Batal</button>'+
       '<button type="button" class="btn btn-primary btn-sm" id="stkSave">Simpan</button></div>';
@@ -105,6 +106,7 @@
     $('#stkUrl').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addSticker();}});
     $('#stkW').oninput=function(){var s=draft[selected];if(!s)return;s.w=+this.value;refreshEl(selected);syncControls();};
     $('#stkR').oninput=function(){var s=draft[selected];if(!s)return;s.r=+this.value;refreshEl(selected);syncControls();};
+    $('#stkX').oninput=function(){var s=draft[selected];if(!s)return;s.sx=+this.value;refreshEl(selected);syncControls();};
     $('#stkDel').onclick=function(){if(!selected)return;delete draft[selected];selected=null;render(draft);syncControls();};
     $('#stkCancel').onclick=function(){stopEdit();};
     $('#stkSave').onclick=save;
@@ -133,10 +135,10 @@
       if(id===selected)b.className='on';
       b.onclick=function(){select(id);};box.appendChild(b);
     });
-    var s=draft[selected],w=$('#stkW'),r=$('#stkR');
-    w.disabled=r.disabled=$('#stkDel').disabled=!s;
-    if(s){w.value=s.w;r.value=s.r;$('#stkWv').textContent=Math.round(s.w)+'%';$('#stkRv').textContent=Math.round(s.r)+'\u00b0';}
-    else{$('#stkWv').textContent='';$('#stkRv').textContent='';}
+    var s=draft[selected],w=$('#stkW'),r=$('#stkR'),x=$('#stkX');
+    w.disabled=r.disabled=x.disabled=$('#stkDel').disabled=!s;
+    if(s){w.value=s.w;r.value=s.r;x.value=s.sx||1;$('#stkWv').textContent=Math.round(s.w)+'%';$('#stkRv').textContent=Math.round(s.r)+'\u00b0';$('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';}
+    else{$('#stkWv').textContent='';$('#stkRv').textContent='';$('#stkXv').textContent='';}
     layer.querySelectorAll('.h4sx-sticker').forEach(function(el){el.classList.toggle('selected',el.dataset.id===selected);});
   }
   function select(id){selected=id;syncControls();}
@@ -145,7 +147,7 @@
     if(!url){toast('Link mesti HTTPS dan sah.','warning');return;}
     if(Object.keys(draft).length>=MAX){toast('Maksimum '+MAX+' sticker.','warning');return;}
     var id=uid(),top=window.scrollY-(wrap.getBoundingClientRect().top+window.scrollY)+140;
-    draft[id]={url:url,x:50,y:Math.round(Math.max(40,top)),w:22,r:0};
+    draft[id]={url:url,x:50,y:Math.round(Math.max(40,top)),w:22,r:0,sx:1};
     inp.value='';selected=id;render(draft);
   }
   function bindDrag(){
