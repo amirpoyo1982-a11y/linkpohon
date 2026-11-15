@@ -29,8 +29,9 @@
   function defW(){return dev()==='d'?22:num(22*REF_W/wrapW(),4,90,22);}
   function eff(s){
     var k=dev();if(k==='d')return s;
-    if(s.o&&s.o[k])return s.o[k];
-    var c=view(s);c.w=num(s.w*REF_W/wrapW(),4,90,s.w);return c;
+    var c=s.o&&s.o[k]?view(s.o[k]):view(s);
+    if(!s.o||!s.o[k])c.w=num(s.w*REF_W/wrapW(),4,90,s.w);
+    c.url=s.url;return c;
   }
   function R(id){return eff(draft[id]);}
   function W(id){
