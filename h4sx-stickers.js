@@ -15,7 +15,7 @@
     Object.keys(raw).forEach(function(id){
       var s=raw[id],url=s&&safeUrl(s.url);
       if(!url||n>=MAX||!/^[\w-]{1,40}$/.test(id))return;
-      n++;var item=view(s);item.url=url;
+      var order=n++;var item=view(s);item.url=url;item.z=num(s.z,0,10000,order);
       if(s.o&&typeof s.o==='object'){var oo={};['t','m'].forEach(function(k){if(s.o[k]&&typeof s.o[k]==='object')oo[k]=view(s.o[k]);});if(Object.keys(oo).length)item.o=oo;}
       out[id]=item;
     });
@@ -31,7 +31,7 @@
     var k=dev();if(k==='d')return s;
     var c=s.o&&s.o[k]?view(s.o[k]):view(s);
     if(!s.o||!s.o[k])c.w=num(s.w*REF_W/wrapW(),4,90,s.w);
-    c.url=s.url;return c;
+    c.url=s.url;c.z=s.z;return c;
   }
   function R(id){return eff(draft[id]);}
   function W(id){
@@ -46,6 +46,7 @@
   }
   function place(el,s){
     el.style.left=s.x+'%';el.style.top=s.y+'px';el.style.width=s.w+'%';
+    el.style.zIndex=String(s.z||0);
     el.style.transform='translate(-50%,0) rotate('+s.r+'deg) scaleX('+(s.sx||1)+') scaleY('+(s.sy||1)+')';
     el.style.setProperty('--isx',String(1/(s.sx||1)));el.style.setProperty('--isy',String(1/(s.sy||1)));
   }
@@ -116,7 +117,7 @@
     fab.title='Edit sticker';fab.setAttribute('aria-label','Edit sticker');fab.textContent='\u2728';
     fab.addEventListener('click',startEdit);document.body.appendChild(fab);
     panel=document.createElement('div');panel.className='sticker-panel';panel.hidden=true;
-    panel.innerHTML='<h3>Sticker H4SX</h3>'+
+    panel.innerHTML='<div class="sticker-panel-head" id="stkPanelDrag"><h3>Sticker H4SX</h3><span>⠿ Seret panel</span></div>'+
       '<p class="hint" id="stkDev"></p>'+
       '<label class="device-picker" for="stkDevice">Layout peranti<select class="form-input" id="stkDevice"><option value="d">PC</option><option value="t">Tablet</option><option value="m">Phone</option></select></label>'+
       '<p class="hint">Pilih PC, Tablet atau Phone di sini untuk edit semua layout terus dari PC. Preview akan ikut lebar peranti yang dipilih. Peranti yang belum diedit guna saiz auto.</p>'+
@@ -128,6 +129,8 @@
       '<label class="sl">Regang ↔<input id="stkX" type="range" min="0.2" max="4" step="0.05"><output id="stkXv"></output><button type="button" class="rs" data-rs="sx" title="Reset regang kiri kanan">↺</button></label>'+
       '<label class="sl">Regang ↕<input id="stkY" type="range" min="0.2" max="4" step="0.05"><output id="stkYv"></output><button type="button" class="rs" data-rs="sy" title="Reset regang atas bawah">↺</button></label>'+
       '<div class="acts"><button type="button" class="btn btn-secondary btn-sm" id="stkCopy">Salin</button>'+
+      '<button type="button" class="btn btn-secondary btn-sm" id="stkFront" title="Bawa sticker ke depan">Ke depan ↑</button>'+
+      '<button type="button" class="btn btn-secondary btn-sm" id="stkBack" title="Hantar sticker ke belakang">Ke belakang ↓</button>'+
       '<button type="button" class="btn btn-secondary btn-sm" id="stkResetAll">Reset semua</button>'+
       '<button type="button" class="btn btn-secondary btn-sm" id="stkResetPos">Reset posisi</button>'+
       '<button type="button" class="btn btn-danger btn-sm" id="stkDel">Padam</button>'+
@@ -141,6 +144,7 @@
       b.addEventListener('click',startEdit);tab.insertBefore(b,tab.firstChild);
     }
     $('#stkAdd').onclick=addSticker;
+    bindPanelDrag();
     $('#stkDevice').addEventListener('change',function(){
       editDevice=this.value;
       setDevicePreview();
@@ -157,6 +161,8 @@
     $('#stkSave').onclick=save;
     panel.addEventListener('click',function(e){var b=e.target.closest('[data-rs]');if(b)resetProp(b.dataset.rs);});
     $('#stkCopy').onclick=copySticker;
+    $('#stkFront').onclick=function(){moveLayer(1);};
+    $('#stkBack').onclick=function(){moveLayer(-1);};
     $('#stkResetAll').onclick=function(){resetProp('all');};
     $('#stkResetPos').onclick=resetPos;
   }
@@ -166,7 +172,7 @@
     if(m&&m.classList.contains('active')){var c=document.getElementById('closeModal');if(c)c.click();}
     draft=JSON.parse(JSON.stringify(saved));selected=null;editDevice=viewportDev();editing=true;
     originalWrapStyle={width:wrap.style.width,maxWidth:wrap.style.maxWidth,boxSizing:wrap.style.boxSizing};
-    $('#stkDevice').value=editDevice;setDevicePreview();
+    $('#stkDevice').value=editDevice;setDevicePreview();resetPanelPosition();
     document.body.classList.add('sticker-edit');panel.hidden=false;
     render(draft);syncControls();
   }
@@ -181,6 +187,49 @@
     var width=PREVIEW_W[editDevice];
     if(width){wrap.style.width=width+'px';wrap.style.maxWidth='none';wrap.style.boxSizing='border-box';}
     else if(originalWrapStyle){wrap.style.width=originalWrapStyle.width;wrap.style.maxWidth=originalWrapStyle.maxWidth;wrap.style.boxSizing=originalWrapStyle.boxSizing;}
+  }
+  function resetPanelPosition(){
+    panel.style.left='';panel.style.top='';panel.style.right='';panel.style.bottom='';panel.style.transform='';
+  }
+  function bindPanelDrag(){
+    var handle=$('#stkPanelDrag'),pid=null,startX=0,startY=0,startLeft=0,startTop=0;
+    handle.addEventListener('pointerdown',function(e){
+      if(e.button!==0)return;
+      e.preventDefault();
+      var rect=panel.getBoundingClientRect();
+      panel.style.left=rect.left+'px';panel.style.top=rect.top+'px';
+      panel.style.right='auto';panel.style.bottom='auto';panel.style.transform='none';
+      pid=e.pointerId;startX=e.clientX;startY=e.clientY;startLeft=rect.left;startTop=rect.top;
+      handle.setPointerCapture(pid);
+    });
+    handle.addEventListener('pointermove',function(e){
+      if(pid!==e.pointerId)return;
+      var maxLeft=Math.max(0,window.innerWidth-panel.offsetWidth);
+      var maxTop=Math.max(0,window.innerHeight-Math.min(60,panel.offsetHeight));
+      panel.style.left=Math.max(0,Math.min(maxLeft,startLeft+e.clientX-startX))+'px';
+      panel.style.top=Math.max(0,Math.min(maxTop,startTop+e.clientY-startY))+'px';
+    });
+    function end(e){if(pid===e.pointerId)pid=null;}
+    handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
+  }
+  function stackedIds(){
+    var ids=Object.keys(draft),order={};
+    ids.forEach(function(id,i){order[id]=i;});
+    return ids.sort(function(a,b){return draft[a].z-draft[b].z||order[a]-order[b];});
+  }
+  function topLayer(){
+    var ids=stackedIds();
+    ids.forEach(function(id,i){draft[id].z=i;});
+    return ids.length;
+  }
+  function moveLayer(direction){
+    if(!selected||!draft[selected])return;
+    var ids=stackedIds(),from=ids.indexOf(selected),to=from+direction;
+    if(to<0||to>=ids.length)return;
+    ids.splice(from,1);ids.splice(to,0,selected);
+    ids.forEach(function(id,i){draft[id].z=i;});
+    render(draft);
+    toast(direction>0?'Sticker dibawa ke depan':'Sticker dihantar ke belakang');
   }
   function refreshEl(id){
     var el=layer.querySelector('[data-id="'+id+'"]');if(el&&draft[id])place(el,R(id));
@@ -197,6 +246,9 @@
     $('#stkDev').textContent='Layout: '+DEVNAME[dev()]+' · Preview '+Math.round(wrapW())+'px';
     w.disabled=r.disabled=x.disabled=y.disabled=$('#stkDel').disabled=!s;
     panel.querySelectorAll('[data-rs],#stkCopy,#stkResetAll,#stkResetPos').forEach(function(b){b.disabled=!s;});
+    var ids=stackedIds(),stackIndex=ids.indexOf(selected);
+    $('#stkFront').disabled=!s||stackIndex===ids.length-1;
+    $('#stkBack').disabled=!s||stackIndex<=0;
     if(s){w.value=s.w;r.value=s.r;x.value=s.sx||1;y.value=s.sy||1;$('#stkWv').textContent=Math.round(s.w)+'%';$('#stkRv').textContent=Math.round(s.r)+'\u00b0';$('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';$('#stkYv').textContent=Math.round((s.sy||1)*100)+'%';}
     else{$('#stkWv').textContent='';$('#stkRv').textContent='';$('#stkXv').textContent='';$('#stkYv').textContent='';}
     layer.querySelectorAll('.h4sx-sticker').forEach(function(el){el.classList.toggle('selected',el.dataset.id===selected);});
@@ -219,6 +271,7 @@
     var s=selected&&draft&&draft[selected];if(!s)return;
     if(Object.keys(draft).length>=MAX){toast('Maksimum '+MAX+' sticker.','warning');return;}
     var id=uid(),c=JSON.parse(JSON.stringify(s));
+    c.z=topLayer();
     function shift(v){v.x=Math.min(130,v.x+5);v.y=Math.min(6000,v.y+30);}
     shift(c);if(c.o)Object.keys(c.o).forEach(function(k){shift(c.o[k]);});
     draft[id]=c;selected=id;render(draft);toast('Sticker disalin');
@@ -228,7 +281,7 @@
     if(!url){toast('Link mesti HTTPS dan sah.','warning');return;}
     if(Object.keys(draft).length>=MAX){toast('Maksimum '+MAX+' sticker.','warning');return;}
     var id=uid(),top=window.scrollY-(wrap.getBoundingClientRect().top+window.scrollY)+140;
-    var s=draft[id]={url:url,x:50,y:Math.round(Math.max(40,top)),w:22,r:0,sx:1,sy:1};
+    var s=draft[id]={url:url,x:50,y:Math.round(Math.max(40,top)),w:22,r:0,sx:1,sy:1,z:topLayer()};
     var k=dev();if(k!=='d'){s.o={};s.o[k]={x:50,y:s.y,w:defW(),r:0,sx:1,sy:1};}
     inp.value='';selected=id;render(draft);
   }

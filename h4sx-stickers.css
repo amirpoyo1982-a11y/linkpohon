@@ -15,7 +15,9 @@ body.is-admin .h4sx-sticker-fab{display:grid}
 body.sticker-edit .h4sx-sticker-fab{display:none}
 .sticker-panel{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:950;width:min(520px,calc(100% - 20px));max-height:48dvh;overflow:auto;overscroll-behavior:contain;padding:14px;border:1px solid var(--border);border-radius:20px;background:var(--bg2);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,.55);font:500 13px Archivo,sans-serif}
 .sticker-panel[hidden]{display:none}
-.sticker-panel h3{margin:0 0 8px;font:800 15px Syne,sans-serif}
+.sticker-panel-head{position:sticky;top:-14px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-14px -14px 10px;padding:14px;background:var(--bg2);border-radius:20px 20px 0 0;cursor:move;touch-action:none;user-select:none}
+.sticker-panel-head h3{margin:0;font:800 15px Syne,sans-serif}
+.sticker-panel-head span{color:var(--muted);font-size:11px;white-space:nowrap}
 .sticker-panel .hint{color:var(--muted);font-size:12px;line-height:1.5;margin:0 0 10px}
 .sticker-panel .device-picker{display:grid;gap:6px;margin:0 0 10px;font-weight:700}
 .sticker-panel .device-picker .form-input{padding:9px 10px}
