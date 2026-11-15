@@ -1,0 +1,27 @@
+/* H4SX stickers — public render + admin editor */
+#stickerLayer{position:absolute;left:0;top:0;width:100%;height:0;pointer-events:none;z-index:6;overflow:visible}
+.h4sx-sticker{position:absolute;margin:0;padding:0;pointer-events:none;-webkit-user-select:none;user-select:none;transform-origin:center;contain:layout style}
+.h4sx-sticker img{display:block;width:100%;height:auto;pointer-events:none;-webkit-user-drag:none;user-select:none;animation:stickerFloat 6s ease-in-out infinite;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
+.h4sx-sticker:nth-child(2n) img{animation-delay:-2s;animation-duration:7s}
+.h4sx-sticker:nth-child(3n) img{animation-delay:-4s}
+@keyframes stickerFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+body.mobile-lite .h4sx-sticker img,body.effects-no-motion .h4sx-sticker img,body.sticker-edit .h4sx-sticker img{animation:none}
+@media (prefers-reduced-motion:reduce){.h4sx-sticker img{animation:none}}
+body.sticker-edit .h4sx-sticker{pointer-events:auto;cursor:grab;touch-action:none;outline:1.5px dashed rgba(255,255,255,.55);outline-offset:4px;border-radius:6px}
+body.sticker-edit .h4sx-sticker.dragging{cursor:grabbing}
+body.sticker-edit .h4sx-sticker.selected{outline:2px solid #72e8ff;box-shadow:0 0 0 5px rgba(114,232,255,.18)}
+.h4sx-sticker-fab{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:900;width:52px;height:52px;border-radius:50%;border:1px solid var(--border);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:22px;cursor:pointer;box-shadow:0 10px 28px rgba(0,0,0,.4);display:none;place-items:center;padding:0}
+body.is-admin .h4sx-sticker-fab{display:grid}
+body.sticker-edit .h4sx-sticker-fab{display:none}
+.sticker-panel{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:950;width:min(520px,calc(100% - 20px));max-height:48dvh;overflow:auto;overscroll-behavior:contain;padding:14px;border:1px solid var(--border);border-radius:20px;background:var(--bg2);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,.55);font:500 13px Archivo,sans-serif}
+.sticker-panel[hidden]{display:none}
+.sticker-panel h3{margin:0 0 8px;font:800 15px Syne,sans-serif}
+.sticker-panel .hint{color:var(--muted);font-size:12px;line-height:1.5;margin:0 0 10px}
+.sticker-panel .row{display:flex;gap:8px;margin-bottom:10px}
+.sticker-panel .row>input{flex:1;min-width:0}
+.sticker-panel .sl{display:grid;grid-template-columns:64px 1fr 46px;align-items:center;gap:8px;margin:6px 0;color:var(--muted);font-size:12px}
+.sticker-panel input[type=range]{width:100%;accent-color:var(--accent)}
+.sticker-panel .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.sticker-thumbs{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:thin}
+.sticker-thumbs button{flex:0 0 54px;height:54px;border-radius:12px;border:2px solid var(--border);background:var(--card) center/contain no-repeat;cursor:pointer;padding:0}
+.sticker-thumbs button.on{border-color:#72e8ff}
