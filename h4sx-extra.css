@@ -38,6 +38,10 @@ a,button,.link-btn,.icon-btn,.tab-btn{touch-action:manipulation}
 @keyframes sigShine{to{background-position:200% center}}
 body.mobile-lite .h4sx-signature .sig,body.effects-no-motion .h4sx-signature .sig{animation:none}
 
+/* Perf (all screens): backdrop-filter over a live wallpaper is re-computed every frame */
+.link-btn,.top-bar,.search-box,.profile-card,.icon-btn,.social-btn,.tab-btn,.widget-card{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.sakura-petal,.particle,.bg-img{will-change:auto}
+
 /* Pinned badge: keep fully inside the card (card has overflow:hidden) */
 body .link-btn.pinned{padding-top:34px}
 body .link-btn.pinned::after{top:9px;right:14px;left:auto;padding:4px 10px;border-radius:999px;line-height:1.2;font-size:10px;box-shadow:0 4px 12px rgba(0,0,0,.28)}
