@@ -8,15 +8,39 @@
     try{var u=new URL(String(v||'').trim());return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch(e){return '';}
   }
   function num(v,min,max,def){v=Number(v);return isFinite(v)?Math.min(max,Math.max(min,v)):def;}
+  function view(s){return {x:num(s.x,-30,130,50),y:num(s.y,-200,6000,120),w:num(s.w,4,90,22),r:num(s.r,-180,180,0),sx:num(s.sx,0.2,4,1),sy:num(s.sy,0.2,4,1)};}
   function clean(raw){
     var out={},n=0;
     if(!raw||typeof raw!=='object')return out;
     Object.keys(raw).forEach(function(id){
       var s=raw[id],url=s&&safeUrl(s.url);
       if(!url||n>=MAX||!/^[\w-]{1,40}$/.test(id))return;
-      n++;out[id]={url:url,x:num(s.x,-30,130,50),y:num(s.y,-200,6000,120),w:num(s.w,4,90,22),r:num(s.r,-180,180,0),sx:num(s.sx,0.2,4,1),sy:num(s.sy,0.2,4,1)};
+      n++;var item=view(s);item.url=url;
+      if(s.o&&typeof s.o==='object'){var oo={};['t','m'].forEach(function(k){if(s.o[k]&&typeof s.o[k]==='object')oo[k]=view(s.o[k]);});if(Object.keys(oo).length)item.o=oo;}
+      out[id]=item;
     });
     return out;
+  }
+  /* Device layouts: d = PC (base fields), t = tablet, m = mobile (stored in s.o) */
+  var REF_W=720, DEVNAME={d:'PC',t:'Tablet',m:'Mobile'};
+  function dev(){var w=window.innerWidth;return w>=1024?'d':w>=600?'t':'m';}
+  function wrapW(){return (wrap&&wrap.getBoundingClientRect().width)||REF_W;}
+  function defW(){return dev()==='d'?22:num(22*REF_W/wrapW(),4,90,22);}
+  function eff(s){
+    var k=dev();if(k==='d')return s;
+    if(s.o&&s.o[k])return s.o[k];
+    var c=view(s);c.w=num(s.w*REF_W/wrapW(),4,90,s.w);return c;
+  }
+  function R(id){return eff(draft[id]);}
+  function W(id){
+    var s=draft[id];if(!s)return null;
+    var k=dev();if(k==='d')return s;
+    if(!s.o)s.o={};if(!s.o[k])s.o[k]=view(eff(s));
+    return s.o[k];
+  }
+  function relayout(){
+    if(editing||!layer)return;
+    layer.querySelectorAll('.h4sx-sticker').forEach(function(el){var s=saved[el.dataset.id];if(s)place(el,eff(s));});
   }
   function place(el,s){
     el.style.left=s.x+'%';el.style.top=s.y+'px';el.style.width=s.w+'%';
@@ -36,7 +60,7 @@
   function render(data){
     if(!layer)return;
     var frag=document.createDocumentFragment();
-    Object.keys(data).forEach(function(id){frag.appendChild(build(id,data[id]));});
+    Object.keys(data).forEach(function(id){frag.appendChild(build(id,eff(data[id])));});
     layer.replaceChildren(frag);
     if(editing)bindDrag();
   }
@@ -77,6 +101,8 @@
     if(!mountLayer())return;
     mountSignature();
     saved=cached();render(saved);
+    var rt=null;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(editing){render(draft);}else relayout();},120);});
+    window.addEventListener('orientationchange',function(){setTimeout(relayout,250);});
     whenFirebase(function(){listen();initEditor();});
   }
   var panel=null, fab=null;
@@ -89,6 +115,8 @@
     fab.addEventListener('click',startEdit);document.body.appendChild(fab);
     panel=document.createElement('div');panel.className='sticker-panel';panel.hidden=true;
     panel.innerHTML='<h3>Sticker H4SX</h3>'+
+      '<p class="hint" id="stkDev"></p>'+
+      '<p class="hint">Setiap peranti ada layout sendiri: buka halaman ini di PC, Tablet atau Mobile (atau kecilkan tingkap) untuk edit layout peranti itu. Peranti yang belum diedit guna saiz auto.</p>'+
       '<p class="hint">Tampal link HTTPS gambar/GIF/PNG/WebP, tekan Tambah. Seret sticker untuk alih posisi. Pilih sticker, kemudian tarik bulatan biru di tepi untuk regang.</p>'+
       '<div class="row"><input class="form-input" id="stkUrl" type="url" placeholder="https://.../sticker.png"><button type="button" class="btn btn-primary" id="stkAdd">Tambah</button></div>'+
       '<div class="sticker-thumbs" id="stkThumbs"></div>'+
@@ -111,10 +139,10 @@
     }
     $('#stkAdd').onclick=addSticker;
     $('#stkUrl').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addSticker();}});
-    $('#stkW').oninput=function(){var s=draft[selected];if(!s)return;s.w=+this.value;refreshEl(selected);syncControls();};
-    $('#stkR').oninput=function(){var s=draft[selected];if(!s)return;s.r=+this.value;refreshEl(selected);syncControls();};
-    $('#stkX').oninput=function(){var s=draft[selected];if(!s)return;s.sx=+this.value;refreshEl(selected);syncControls();};
-    $('#stkY').oninput=function(){var s=draft[selected];if(!s)return;s.sy=+this.value;refreshEl(selected);syncControls();};
+    $('#stkW').oninput=function(){var s=selected&&W(selected);if(!s)return;s.w=+this.value;refreshEl(selected);syncControls();};
+    $('#stkR').oninput=function(){var s=selected&&W(selected);if(!s)return;s.r=+this.value;refreshEl(selected);syncControls();};
+    $('#stkX').oninput=function(){var s=selected&&W(selected);if(!s)return;s.sx=+this.value;refreshEl(selected);syncControls();};
+    $('#stkY').oninput=function(){var s=selected&&W(selected);if(!s)return;s.sy=+this.value;refreshEl(selected);syncControls();};
     $('#stkDel').onclick=function(){if(!selected)return;delete draft[selected];selected=null;render(draft);syncControls();};
     $('#stkCancel').onclick=function(){stopEdit();};
     $('#stkSave').onclick=save;
@@ -137,7 +165,7 @@
     render(saved);
   }
   function refreshEl(id){
-    var el=layer.querySelector('[data-id="'+id+'"]');if(el&&draft[id])place(el,draft[id]);
+    var el=layer.querySelector('[data-id="'+id+'"]');if(el&&draft[id])place(el,R(id));
   }
   function syncControls(){
     var box=$('#stkThumbs');box.replaceChildren();
@@ -147,7 +175,8 @@
       if(id===selected)b.className='on';
       b.onclick=function(){select(id);};box.appendChild(b);
     });
-    var s=draft[selected],w=$('#stkW'),r=$('#stkR'),x=$('#stkX'),y=$('#stkY');
+    var s=draft[selected]?R(selected):null,w=$('#stkW'),r=$('#stkR'),x=$('#stkX'),y=$('#stkY');
+    $('#stkDev').textContent='Layout: '+DEVNAME[dev()]+' ('+window.innerWidth+'px)';
     w.disabled=r.disabled=x.disabled=y.disabled=$('#stkDel').disabled=!s;
     panel.querySelectorAll('[data-rs],#stkCopy,#stkResetAll,#stkResetPos').forEach(function(b){b.disabled=!s;});
     if(s){w.value=s.w;r.value=s.r;x.value=s.sx||1;y.value=s.sy||1;$('#stkWv').textContent=Math.round(s.w)+'%';$('#stkRv').textContent=Math.round(s.r)+'\u00b0';$('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';$('#stkYv').textContent=Math.round((s.sy||1)*100)+'%';}
@@ -155,23 +184,25 @@
     layer.querySelectorAll('.h4sx-sticker').forEach(function(el){el.classList.toggle('selected',el.dataset.id===selected);});
   }
   function select(id){selected=id;syncControls();}
-  var RESET={w:22,r:0,sx:1,sy:1};
+  var RESET=null;
   function resetProp(k){
-    var s=draft&&draft[selected];if(!s)return;
-    if(k==='all')Object.keys(RESET).forEach(function(p){s[p]=RESET[p];});
-    else if(k in RESET)s[k]=RESET[k];
+    var s=selected&&draft&&W(selected);if(!s)return;
+    var D={w:defW(),r:0,sx:1,sy:1};
+    if(k==='all')Object.keys(D).forEach(function(p){s[p]=D[p];});
+    else if(k in D)s[k]=D[k];
     refreshEl(selected);syncControls();
   }
   function resetPos(){
-    var s=draft&&draft[selected];if(!s)return;
+    var s=selected&&draft&&W(selected);if(!s)return;
     s.x=50;s.y=Math.round(Math.max(40,window.scrollY-(wrap.getBoundingClientRect().top+window.scrollY)+140));
     refreshEl(selected);
   }
   function copySticker(){
-    var s=draft&&draft[selected];if(!s)return;
+    var s=selected&&draft&&draft[selected];if(!s)return;
     if(Object.keys(draft).length>=MAX){toast('Maksimum '+MAX+' sticker.','warning');return;}
     var id=uid(),c=JSON.parse(JSON.stringify(s));
-    c.x=Math.min(130,s.x+5);c.y=Math.min(6000,s.y+30);
+    function shift(v){v.x=Math.min(130,v.x+5);v.y=Math.min(6000,v.y+30);}
+    shift(c);if(c.o)Object.keys(c.o).forEach(function(k){shift(c.o[k]);});
     draft[id]=c;selected=id;render(draft);toast('Sticker disalin');
   }
   function addSticker(){
@@ -179,7 +210,8 @@
     if(!url){toast('Link mesti HTTPS dan sah.','warning');return;}
     if(Object.keys(draft).length>=MAX){toast('Maksimum '+MAX+' sticker.','warning');return;}
     var id=uid(),top=window.scrollY-(wrap.getBoundingClientRect().top+window.scrollY)+140;
-    draft[id]={url:url,x:50,y:Math.round(Math.max(40,top)),w:22,r:0,sx:1,sy:1};
+    var s=draft[id]={url:url,x:50,y:Math.round(Math.max(40,top)),w:22,r:0,sx:1,sy:1};
+    var k=dev();if(k!=='d'){s.o={};s.o[k]={x:50,y:s.y,w:defW(),r:0,sx:1,sy:1};}
     inp.value='';selected=id;render(draft);
   }
   function bindDrag(){
@@ -188,12 +220,13 @@
       el.addEventListener('pointerdown',function(e){
         if(e.button>0)return;
         e.preventDefault();pid=e.pointerId;el.setPointerCapture(pid);
-        el.classList.add('dragging');sx=e.clientX;sy=e.clientY;ox=draft[id].x;oy=draft[id].y;
+        var v=W(id);
+        el.classList.add('dragging');sx=e.clientX;sy=e.clientY;ox=v.x;oy=v.y;
         if(selected!==id)select(id);
       });
       el.addEventListener('pointermove',function(e){
         if(pid!==e.pointerId)return;
-        var rw=wrap.getBoundingClientRect().width||1,s=draft[id];
+        var rw=wrap.getBoundingClientRect().width||1,s=W(id);
         s.x=Math.round(Math.min(130,Math.max(-30,ox+(e.clientX-sx)/rw*100))*10)/10;
         s.y=Math.round(Math.min(6000,Math.max(-200,oy+(e.clientY-sy))));
         place(el,s);
@@ -210,14 +243,14 @@
       h.addEventListener('pointerdown',function(e){
         e.preventDefault();e.stopPropagation();pid=e.pointerId;h.setPointerCapture(pid);
         if(selected!==id)select(id);
-        s0=JSON.parse(JSON.stringify(draft[id]));sx=e.clientX;sy=e.clientY;
+        s0=JSON.parse(JSON.stringify(W(id)));sx=e.clientX;sy=e.clientY;
         W0=Math.max(20,el.offsetWidth);H0=Math.max(20,el.offsetHeight);
         rw=wrap.getBoundingClientRect().width||1;
         var a=s0.r*Math.PI/180;c=Math.cos(a);n=Math.sin(a);
       });
       h.addEventListener('pointermove',function(e){
         if(pid!==e.pointerId)return;
-        var dx=e.clientX-sx,dy=e.clientY-sy,s=draft[id],base=horiz?W0:H0,k=horiz?'sx':'sy';
+        var dx=e.clientX-sx,dy=e.clientY-sy,s=W(id),base=horiz?W0:H0,k=horiz?'sx':'sy';
         var d=horiz?(dx*c+dy*n):(-dx*n+dy*c);
         var start=s0[k]||1,next=Math.min(4,Math.max(0.2,start+dir*d/base));
         var move=dir*(next-start)*base/2;
@@ -232,7 +265,7 @@
     });
   }
   function syncValues(){
-    var s=draft[selected];if(!s)return;
+    var s=draft[selected]&&R(selected);if(!s)return;
     $('#stkX').value=s.sx||1;$('#stkY').value=s.sy||1;
     $('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';$('#stkYv').textContent=Math.round((s.sy||1)*100)+'%';
   }
