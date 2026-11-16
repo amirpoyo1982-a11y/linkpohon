@@ -54,9 +54,12 @@
     el.style.zIndex=String(s.z||0);
     el.style.transform='translate(-50%,0) rotate('+s.r+'deg) scaleX('+(s.sx||1)+') scaleY('+(s.sy||1)+')';
     el.style.setProperty('--isx',String(1/(s.sx||1)));el.style.setProperty('--isy',String(1/(s.sy||1)));
-    if(!editing && s.link){
+    if(!editing && (s.link || s.text)){
       el.style.pointerEvents = 'auto';
       el.style.cursor = 'pointer';
+    } else if (!editing) {
+      el.style.pointerEvents = 'none';
+      el.style.cursor = 'default';
     }
   }
   function build(id,s){
@@ -82,7 +85,10 @@
       el.appendChild(txt);
     }
 
-    if(editing)['l','r','t','b'].forEach(function(k){var h=document.createElement('i');h.className='stk-h '+k;h.dataset.h=k;el.appendChild(h);});
+    if(editing){
+      ['l','r','t','b'].forEach(function(k){var h=document.createElement('i');h.className='stk-h '+k;h.dataset.h=k;el.appendChild(h);});
+      el.style.pointerEvents = 'auto'; // Pastikan dalam edit mode boleh tekan
+    }
     place(el,s);return el;
   }
   function render(data){
@@ -90,6 +96,10 @@
     var frag=document.createDocumentFragment();
     Object.keys(data).forEach(function(id){frag.appendChild(build(id,eff(data[id])));});
     layer.replaceChildren(frag);
+    // Hapus aria-hidden bila ada link/text supaya accessible dan clickable
+    var hasInteractive = Object.keys(data).some(function(k){ var s=data[k]; return s.link || s.text; });
+    if(hasInteractive) layer.removeAttribute('aria-hidden');
+    else layer.setAttribute('aria-hidden','true');
     if(editing)bindDrag();
   }
   function cached(){

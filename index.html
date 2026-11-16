@@ -51,6 +51,13 @@
   .link-btn:hover::before {
     animation: glowSweep 0.8s ease-in-out forwards;
   }
+  /* Ensure sticker layer is above most but below modals */
+  #stickerLayer {
+    z-index: 10 !important;
+  }
+  .h4sx-sticker {
+    pointer-events: auto !important; /* Force enable events for links */
+  }
 </style>
 </head>
 <body data-theme="dark" class="clean-gateway">
