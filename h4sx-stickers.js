@@ -8,7 +8,7 @@
     try{var u=new URL(String(v||'').trim());return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch(e){return '';}
   }
   function num(v,min,max,def){v=Number(v);return isFinite(v)?Math.min(max,Math.max(min,v)):def;}
-  function view(s){return {x:num(s.x,-30,130,50),y:num(s.y,-200,6000,120),w:num(s.w,4,90,22),r:num(s.r,-180,180,0),sx:num(s.sx,0.2,4,1),sy:num(s.sy,0.2,4,1),link:String(s.link||''),text:String(s.text||'')};}
+  function view(s){return {x:num(s.x,-30,130,50),y:num(s.y,-200,6000,120),w:num(s.w,4,90,22),r:num(s.r,-180,180,0),sx:num(s.sx,0.2,4,1),sy:num(s.sy,0.2,4,1),link:String(s.link||''),text:String(s.text||''),textSize:num(s.textSize,8,96,24),textColor:String(s.textColor||'#ffffff'),textStyle:String(s.textStyle||'glow')};}
   function clean(raw){
     var out={},n=0;
     if(!raw||typeof raw!=='object')return out;
@@ -47,6 +47,9 @@
     c.url=s.url;c.z=s.z;
     if(!c.link)c.link=s.link||'';
     if(!c.text)c.text=s.text||'';
+    if(!c.textSize)c.textSize=s.textSize||24;
+    if(!c.textColor)c.textColor=s.textColor||'#ffffff';
+    if(!c.textStyle)c.textStyle=s.textStyle||'glow';
     return c;
   }
   function R(id){return eff(draft[id]);}
@@ -91,8 +94,10 @@
     
     if(s.text){
       var txt = document.createElement('span');
-      txt.className = 'stk-text';
+      txt.className = 'stk-text stk-text-'+(s.textStyle||'glow');
       txt.textContent = s.text;
+      txt.style.fontSize = (s.textSize||24)+'px';
+      txt.style.color = s.textColor || '#ffffff';
       el.appendChild(txt);
     }
 
@@ -182,6 +187,7 @@
       '<p class="hint">Tampal link HTTPS gambar/GIF/PNG/WebP, tekan Tambah. Seret sticker untuk alih posisi. Pilih sticker, kemudian tarik bulatan biru di tepi untuk regang.</p>'+
       '<div class="row"><input class="form-input" id="stkUrl" type="url" placeholder="https://.../sticker.png"><button type="button" class="btn btn-primary" id="stkAdd">Tambah</button></div>'+
       '<div class="row" style="margin-top:10px"><input class="form-input" id="stkLink" type="url" placeholder="Pautan Link (pilihan)"><input class="form-input" id="stkText" type="text" placeholder="Text Sticker (pilihan)"></div>'+
+      '<div class="row"><label class="stk-text-setting">Saiz text <input id="stkTextSize" type="range" min="8" max="96" value="24"><output id="stkTextSizeV">24px</output></label><label class="stk-text-setting">Warna <input id="stkTextColor" type="color" value="#ffffff"></label><select class="form-input" id="stkTextStyle"><option value="glow">Glow</option><option value="solid">Solid</option><option value="outline">Outline</option><option value="gradient">Gradient</option></select></div>'+
       '<div class="sticker-thumbs" id="stkThumbs"></div>'+
       '<label class="sl">Saiz<input id="stkW" type="range" min="4" max="90" step="1"><output id="stkWv"></output><button type="button" class="rs" data-rs="w" title="Reset saiz">↺</button></label>'+
       '<label class="sl">Putar<input id="stkR" type="range" min="-180" max="180" step="1"><output id="stkRv"></output><button type="button" class="rs" data-rs="r" title="Reset putaran">↺</button></label>'+
@@ -217,6 +223,9 @@
     $('#stkY').oninput=function(){var s=selected&&W(selected);if(!s)return;s.sy=+this.value;refreshEl(selected);syncControls();};
     $('#stkLink').oninput=function(){var s=selected&&W(selected);if(!s)return;s.link=this.value;refreshEl(selected);};
     $('#stkText').oninput=function(){var s=selected&&W(selected);if(!s)return;s.text=this.value;refreshEl(selected);};
+    $('#stkTextSize').oninput=function(){var s=selected&&W(selected);if(!s)return;s.textSize=+this.value;$('#stkTextSizeV').textContent=this.value+'px';refreshEl(selected);};
+    $('#stkTextColor').oninput=function(){var s=selected&&W(selected);if(!s)return;s.textColor=this.value;refreshEl(selected);};
+    $('#stkTextStyle').oninput=function(){var s=selected&&W(selected);if(!s)return;s.textStyle=this.value;refreshEl(selected);};
     $('#stkDel').onclick=function(){if(!selected)return;delete draft[selected];selected=null;render(draft);syncControls();};
     $('#stkCancel').onclick=function(){stopEdit();};
     $('#stkSave').onclick=save;
@@ -314,6 +323,10 @@
       w.value=s.w;r.value=s.r;x.value=s.sx||1;y.value=s.sy||1;
       $('#stkLink').value=s.link||'';
       $('#stkText').value=s.text||'';
+      $('#stkTextSize').value=s.textSize||24;
+      $('#stkTextSizeV').textContent=(s.textSize||24)+'px';
+      $('#stkTextColor').value=/^#[0-9a-f]{6}$/i.test(s.textColor||'')?s.textColor:'#ffffff';
+      $('#stkTextStyle').value=['glow','solid','outline','gradient'].includes(s.textStyle)?s.textStyle:'glow';
       $('#stkWv').textContent=Math.round(s.w)+'%';$('#stkRv').textContent=Math.round(s.r)+'\u00b0';$('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';$('#stkYv').textContent=Math.round((s.sy||1)*100)+'%';
     }
     else{$('#stkLink').value='';$('#stkText').value='';$('#stkWv').textContent='';$('#stkRv').textContent='';$('#stkXv').textContent='';$('#stkYv').textContent='';}
@@ -347,7 +360,7 @@
     if(!url && !text){toast('Link gambar atau text mesti diisi.','warning');return;}
     if(Object.keys(draft).length>=MAX){toast('Maksimum '+MAX+' sticker.','warning');return;}
     var id=uid(),top=window.scrollY-(wrap.getBoundingClientRect().top+window.scrollY)+140;
-    var s=draft[id]={url:url,link:safeUrl(link),text:text,x:50,y:Math.round(Math.max(40,top)),w:22,r:0,sx:1,sy:1,z:topLayer()};
+    var s=draft[id]={url:url,link:safeUrl(link),text:text,textSize:+$('#stkTextSize').value||24,textColor:$('#stkTextColor').value||'#ffffff',textStyle:$('#stkTextStyle').value||'glow',x:50,y:Math.round(Math.max(40,top)),w:22,r:0,sx:1,sy:1,z:topLayer()};
     var k=dev();if(k!=='d'){s.o={};s.o[k]={x:50,y:s.y,w:defW(),r:0,sx:1,sy:1,link:s.link,text:s.text};}
     inp.value='';$('#stkLink').value='';$('#stkText').value='';selected=id;render(draft);syncControls();
   }

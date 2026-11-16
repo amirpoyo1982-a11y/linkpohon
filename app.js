@@ -224,6 +224,7 @@
   }
   
   function initFirebase(){
+    document.body.classList.add('focus-link-mode');
     renderAll();
     setupBackgroundEffects();
     // 🆕 Fast render: we're showing cached data from last visit right now —
@@ -680,6 +681,11 @@
     document.getElementById('linkBadgePreviewTitle').textContent = document.getElementById('linkTitle').value.trim() || 'Website H4SX Market';
     document.getElementById('linkBadgeColorValue').textContent = style === 'rainbow' ? 'Rainbow bergerak' : document.getElementById('linkVerifiedColor').value.toUpperCase();
   }
+  function linkStatusHtml(link){
+    const status=String(link.status||'');
+    const labels={new:'NEW',hot:'🔥 HOT',sale:'🏷 SALE',live:'● LIVE',updated:'UPDATED'};
+    return labels[status] ? '<span class="link-status status-'+status+'">'+labels[status]+'</span>' : '';
+  }
   function buildLinkCardHtml(link, delay, isPinned){
     const iconHtml = link.iconUrl 
       ? '<img src="'+link.iconUrl+'" alt="" onerror="this.parentElement.innerHTML=\''+(link.icon||'')+'\'">'
@@ -702,7 +708,7 @@
       <a class="link-btn${link.maintenance ? ' maintenance' : ''}${isPinned ? ' pinned' : ''}${link.customStyle ? ' custom-link-style' : ''}" href="${link.url}" target="_blank" rel="noopener noreferrer" data-id="${link.id}" data-maintenance="${!!link.maintenance}" style="animation-delay:${delay}s;${link.customStyle ? customLinkStyle(link) : ''}">
         <div class="link-icon">${iconHtml}</div>
         <div class="link-text">
-          <div class="link-title">${escapeHtml(link.title)}${linkBadgeHtml(link)}</div>
+          <div class="link-title">${escapeHtml(link.title)}${linkBadgeHtml(link)}${linkStatusHtml(link)}</div>
           ${link.desc ? '<div class="link-desc">'+escapeHtml(link.desc)+'</div>' : ''}
           ${countdownHtml}
         </div>
@@ -1244,6 +1250,7 @@
       fillLinkStyle();
       document.getElementById('linkMaintenance').checked = false;
       document.getElementById('linkPinned').checked = false;
+      document.getElementById('linkStatus').value = '';
       document.getElementById('linkVerified').checked = false;
       document.getElementById('linkVerifiedStyle').value = 'solid';
       document.getElementById('linkVerifiedColor').value = '#38bdf8';
@@ -1267,6 +1274,7 @@
     document.getElementById('linkIconUrl').value = link.iconUrl || '';
     document.getElementById('linkMaintenance').checked = !!link.maintenance;
     document.getElementById('linkPinned').checked = !!link.pinned;
+    document.getElementById('linkStatus').value = ['new','hot','sale','live','updated'].includes(link.status) ? link.status : '';
     document.getElementById('linkVerified').checked = link.verified === true;
     document.getElementById('linkVerifiedStyle').value = ['rainbow','gif'].includes(link.verifiedStyle) ? link.verifiedStyle : 'solid';
     fillLinkStyle(link);
@@ -1996,6 +2004,12 @@
       e.stopPropagation();
       shareMenu.classList.remove('active');
       document.getElementById('qrModal').classList.add('active');
+      const previewAvatar=document.getElementById('sharePreviewAvatar');
+      const previewName=document.getElementById('sharePreviewName');
+      const previewHandle=document.getElementById('sharePreviewHandle');
+      if(previewAvatar)previewAvatar.src=appData.profile.avatar||'https://i.postimg.cc/FR4p6BYD/Gambar-Bocil-Anime-(6).png';
+      if(previewName)previewName.textContent=appData.profile.name||'H4SX Gateway';
+      if(previewHandle)previewHandle.textContent=appData.profile.handle||'@h4sx.official';
       const canvas = document.getElementById('qrCanvas');
       const qrUrl = window.location.href.split('#')[0];
       if(window.QRCode && canvas){
@@ -2129,7 +2143,7 @@
       const badgeGif=document.getElementById('linkVerifiedGif').value.trim();
       const iconUrl=document.getElementById('linkIconUrl').value.trim();
       if((badgeGif&&!gifCandidates(badgeGif).length)||(iconUrl&&!gifCandidates(iconUrl).length)){showToast('Link gambar/GIF mesti HTTPS yang sah.','warning');return;}
-      const linkData = { ...linkStyleInputs(),verifiedGif:badgeGif, title, url, desc: document.getElementById('linkDesc').value.trim(), category: document.getElementById('linkCategory').value.trim() || 'Utama', icon: document.getElementById('linkIcon').value.trim(), iconUrl: gifCandidates(iconUrl)[0] || '', maintenance: document.getElementById('linkMaintenance').checked, pinned: document.getElementById('linkPinned').checked, verified: document.getElementById('linkVerified').checked, verifiedStyle: document.getElementById('linkVerifiedStyle').value, verifiedColor: document.getElementById('linkVerifiedColor').value, scheduleStart: document.getElementById('linkScheduleStart').value || null, scheduleEnd: document.getElementById('linkScheduleEnd').value || null, countdown: document.getElementById('linkCountdown').value || null, clicks: 0 };
+      const linkData = { ...linkStyleInputs(),verifiedGif:badgeGif, title, url, desc: document.getElementById('linkDesc').value.trim(), category: document.getElementById('linkCategory').value.trim() || 'Utama', icon: document.getElementById('linkIcon').value.trim(), iconUrl: gifCandidates(iconUrl)[0] || '', maintenance: document.getElementById('linkMaintenance').checked, pinned: document.getElementById('linkPinned').checked, status: document.getElementById('linkStatus').value || '', verified: document.getElementById('linkVerified').checked, verifiedStyle: document.getElementById('linkVerifiedStyle').value, verifiedColor: document.getElementById('linkVerifiedColor').value, scheduleStart: document.getElementById('linkScheduleStart').value || null, scheduleEnd: document.getElementById('linkScheduleEnd').value || null, countdown: document.getElementById('linkCountdown').value || null, clicks: 0 };
       const btn = document.getElementById('saveLinkBtn');
       btn.disabled = true; btn.textContent = 'Menyimpan...';
       const doSave = ()=>{
