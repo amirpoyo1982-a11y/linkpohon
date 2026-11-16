@@ -196,9 +196,6 @@
     }
     $('#stkAdd').onclick=addSticker;
     bindPanelDrag();
-    $('#stkDevice').addEventListener('change',function(){
-      this.value='d';
-    });
     $('#stkUrl').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addSticker();}});
     $('#stkW').oninput=function(){var s=selected&&W(selected);if(!s)return;s.w=+this.value;refreshEl(selected);syncControls();};
     $('#stkR').oninput=function(){var s=selected&&W(selected);if(!s)return;s.r=+this.value;refreshEl(selected);syncControls();};
@@ -225,8 +222,6 @@
     if(m&&m.classList.contains('active')){var c=document.getElementById('closeModal');if(c)c.click();}
     draft=JSON.parse(JSON.stringify(saved));selected=null;editDevice='d';editing=true;
     originalWrapStyle={width:wrap.style.width,maxWidth:wrap.style.maxWidth,boxSizing:wrap.style.boxSizing};
-    $('#stkDevice').value='d';
-    $('#stkDevice').disabled=true;
     resetPanelPosition();
     document.body.classList.add('sticker-edit');panel.hidden=false;
     render(draft);syncControls();
