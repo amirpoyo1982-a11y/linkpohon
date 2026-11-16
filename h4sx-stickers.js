@@ -13,10 +13,18 @@
     var out={},n=0;
     if(!raw||typeof raw!=='object')return out;
     Object.keys(raw).forEach(function(id){
-      var s=raw[id],url=s&&safeUrl(s.url);
-      if(!url && !s.text) return; // Allow if has text even no img
+      var s=raw[id],url=s&&safeUrl(s.url),link=s&&safeUrl(s.link),text=String(s&&s.text||'').trim();
+      if(s&&s.o&&typeof s.o==='object'){
+        ['t','m'].forEach(function(k){
+          var o=s.o[k];
+          if(!o||typeof o!=='object')return;
+          if(!link) link = safeUrl(o.link) || link;
+          if(!text) text = String(o.text||'').trim() || text;
+        });
+      }
+      if(!url && !text) return; // Allow text-only stickers
       if(n>=MAX||!/^[\w-]{1,40}$/.test(id))return;
-      var order=n++;var item=view(s);item.url=url;item.z=num(s.z,0,10000,order);
+      var order=n++;var item=view(s);item.url=url;item.link=link;item.text=text;item.z=num(s.z,0,10000,order);
       if(s.o&&typeof s.o==='object'){var oo={};['t','m'].forEach(function(k){if(s.o[k]&&typeof s.o[k]==='object')oo[k]=view(s.o[k]);});if(Object.keys(oo).length)item.o=oo;}
       out[id]=item;
     });
@@ -36,7 +44,10 @@
       c.x=num(s.x,-30,130,50);
       c.y=num(s.y,-200,6000,s.y);
     }
-    c.url=s.url;c.z=s.z;c.link=s.link;c.text=s.text;return c;
+    c.url=s.url;c.z=s.z;
+    if(!c.link)c.link=s.link||'';
+    if(!c.text)c.text=s.text||'';
+    return c;
   }
   function R(id){return eff(draft[id]);}
   function W(id){
@@ -71,7 +82,7 @@
     }
     el.className='h4sx-sticker';el.dataset.id=id;
     
-    if(s.url){
+      if(s.url){
       var img=document.createElement('img');
       img.alt='';img.decoding='async';img.loading='lazy';img.draggable=false;img.referrerPolicy='no-referrer';
       img.src=s.url;img.addEventListener('error',function(){img.style.display='none';});
@@ -332,13 +343,13 @@
     draft[id]=c;selected=id;render(draft);toast('Sticker disalin');
   }
   function addSticker(){
-    var inp=$('#stkUrl'),url=safeUrl(inp.value);
-    if(!url){toast('Link mesti HTTPS dan sah.','warning');return;}
+    var inp=$('#stkUrl'),url=safeUrl(inp.value),link=$('#stkLink').value.trim(),text=$('#stkText').value.trim();
+    if(!url && !text){toast('Link gambar atau text mesti diisi.','warning');return;}
     if(Object.keys(draft).length>=MAX){toast('Maksimum '+MAX+' sticker.','warning');return;}
     var id=uid(),top=window.scrollY-(wrap.getBoundingClientRect().top+window.scrollY)+140;
-    var s=draft[id]={url:url,x:50,y:Math.round(Math.max(40,top)),w:22,r:0,sx:1,sy:1,z:topLayer()};
-    var k=dev();if(k!=='d'){s.o={};s.o[k]={x:50,y:s.y,w:defW(),r:0,sx:1,sy:1};}
-    inp.value='';selected=id;render(draft);
+    var s=draft[id]={url:url,link:safeUrl(link),text:text,x:50,y:Math.round(Math.max(40,top)),w:22,r:0,sx:1,sy:1,z:topLayer()};
+    var k=dev();if(k!=='d'){s.o={};s.o[k]={x:50,y:s.y,w:defW(),r:0,sx:1,sy:1,link:s.link,text:s.text};}
+    inp.value='';$('#stkLink').value='';$('#stkText').value='';selected=id;render(draft);syncControls();
   }
   function bindDrag(){
     layer.querySelectorAll('.h4sx-sticker').forEach(function(el){
