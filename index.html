@@ -16,6 +16,42 @@
 <link rel="stylesheet" href="h4sx-extra.css?v=20261115c">
 <link rel="stylesheet" href="h4sx-stickers.css?v=20261116a">
 <link rel="stylesheet" href="h4sx-profile.css?v=20261115">
+<style>
+  /* --- GLOW ENTRY ANIMATIONS --- */
+  @keyframes linkReveal {
+    from { opacity: 0; transform: translateY(24px) scale(0.96); filter: blur(8px); }
+    to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+  @keyframes glowSweep {
+    0% { transform: translateX(-150%) skewX(-25deg); opacity: 0; }
+    30% { opacity: 1; }
+    100% { transform: translateX(150%) skewX(-25deg); opacity: 0; }
+  }
+  .link-btn {
+    opacity: 0;
+    animation: linkReveal 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    position: relative;
+    overflow: hidden;
+  }
+  .link-btn::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+    transform: skewX(-25deg);
+    animation: glowSweep 1.6s ease-in-out;
+    animation-delay: inherit;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .link-btn:hover::before {
+    animation: none; /* Reset animation */
+    transition: none;
+  }
+  .link-btn:hover::before {
+    animation: glowSweep 0.8s ease-in-out forwards;
+  }
+</style>
 </head>
 <body data-theme="dark" class="clean-gateway">
 
