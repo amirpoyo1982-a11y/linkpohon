@@ -60,11 +60,15 @@
     }
   }
   function build(id,s){
-    var el = document.createElement( (!editing && s.link) ? 'a' : 'div');
-    if(!editing && s.link) {
+    var el = document.createElement(s.link ? 'a' : 'div');
+    if(s.link) {
       el.href = s.link;
       el.target = '_blank';
       el.rel = 'noopener noreferrer';
+      el.addEventListener('click', function(e){
+        if(!s.link) return;
+        e.stopPropagation();
+      });
     }
     el.className='h4sx-sticker';el.dataset.id=id;
     
