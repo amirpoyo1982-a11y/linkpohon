@@ -8,13 +8,14 @@
     try{var u=new URL(String(v||'').trim());return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch(e){return '';}
   }
   function num(v,min,max,def){v=Number(v);return isFinite(v)?Math.min(max,Math.max(min,v)):def;}
-  function view(s){return {x:num(s.x,-30,130,50),y:num(s.y,-200,6000,120),w:num(s.w,4,90,22),r:num(s.r,-180,180,0),sx:num(s.sx,0.2,4,1),sy:num(s.sy,0.2,4,1)};}
+  function view(s){return {x:num(s.x,-30,130,50),y:num(s.y,-200,6000,120),w:num(s.w,4,90,22),r:num(s.r,-180,180,0),sx:num(s.sx,0.2,4,1),sy:num(s.sy,0.2,4,1),link:String(s.link||''),text:String(s.text||'')};}
   function clean(raw){
     var out={},n=0;
     if(!raw||typeof raw!=='object')return out;
     Object.keys(raw).forEach(function(id){
       var s=raw[id],url=s&&safeUrl(s.url);
-      if(!url||n>=MAX||!/^[\w-]{1,40}$/.test(id))return;
+      if(!url && !s.text) return; // Allow if has text even no img
+      if(n>=MAX||!/^[\w-]{1,40}$/.test(id))return;
       var order=n++;var item=view(s);item.url=url;item.z=num(s.z,0,10000,order);
       if(s.o&&typeof s.o==='object'){var oo={};['t','m'].forEach(function(k){if(s.o[k]&&typeof s.o[k]==='object')oo[k]=view(s.o[k]);});if(Object.keys(oo).length)item.o=oo;}
       out[id]=item;
@@ -35,7 +36,7 @@
       c.x=num(s.x,-30,130,50);
       c.y=num(s.y,-200,6000,s.y);
     }
-    c.url=s.url;c.z=s.z;return c;
+    c.url=s.url;c.z=s.z;c.link=s.link;c.text=s.text;return c;
   }
   function R(id){return eff(draft[id]);}
   function W(id){
@@ -53,14 +54,34 @@
     el.style.zIndex=String(s.z||0);
     el.style.transform='translate(-50%,0) rotate('+s.r+'deg) scaleX('+(s.sx||1)+') scaleY('+(s.sy||1)+')';
     el.style.setProperty('--isx',String(1/(s.sx||1)));el.style.setProperty('--isy',String(1/(s.sy||1)));
+    if(!editing && s.link){
+      el.style.pointerEvents = 'auto';
+      el.style.cursor = 'pointer';
+    }
   }
   function build(id,s){
-    var el=document.createElement('div');
+    var el = document.createElement( (!editing && s.link) ? 'a' : 'div');
+    if(!editing && s.link) {
+      el.href = s.link;
+      el.target = '_blank';
+      el.rel = 'noopener noreferrer';
+    }
     el.className='h4sx-sticker';el.dataset.id=id;
-    var img=document.createElement('img');
-    img.alt='';img.decoding='async';img.loading='lazy';img.draggable=false;img.referrerPolicy='no-referrer';
-    img.src=s.url;img.addEventListener('error',function(){el.style.display='none';});
-    el.appendChild(img);
+    
+    if(s.url){
+      var img=document.createElement('img');
+      img.alt='';img.decoding='async';img.loading='lazy';img.draggable=false;img.referrerPolicy='no-referrer';
+      img.src=s.url;img.addEventListener('error',function(){img.style.display='none';});
+      el.appendChild(img);
+    }
+    
+    if(s.text){
+      var txt = document.createElement('span');
+      txt.className = 'stk-text';
+      txt.textContent = s.text;
+      el.appendChild(txt);
+    }
+
     if(editing)['l','r','t','b'].forEach(function(k){var h=document.createElement('i');h.className='stk-h '+k;h.dataset.h=k;el.appendChild(h);});
     place(el,s);return el;
   }
@@ -139,6 +160,7 @@
       '<p class="hint">Pilih PC, Tablet atau Phone di sini untuk edit semua layout terus dari PC. Preview akan ikut lebar peranti yang dipilih. Peranti yang belum diedit guna saiz auto.</p>'+
       '<p class="hint">Tampal link HTTPS gambar/GIF/PNG/WebP, tekan Tambah. Seret sticker untuk alih posisi. Pilih sticker, kemudian tarik bulatan biru di tepi untuk regang.</p>'+
       '<div class="row"><input class="form-input" id="stkUrl" type="url" placeholder="https://.../sticker.png"><button type="button" class="btn btn-primary" id="stkAdd">Tambah</button></div>'+
+      '<div class="row" style="margin-top:10px"><input class="form-input" id="stkLink" type="url" placeholder="Pautan Link (pilihan)"><input class="form-input" id="stkText" type="text" placeholder="Text Sticker (pilihan)"></div>'+
       '<div class="sticker-thumbs" id="stkThumbs"></div>'+
       '<label class="sl">Saiz<input id="stkW" type="range" min="4" max="90" step="1"><output id="stkWv"></output><button type="button" class="rs" data-rs="w" title="Reset saiz">↺</button></label>'+
       '<label class="sl">Putar<input id="stkR" type="range" min="-180" max="180" step="1"><output id="stkRv"></output><button type="button" class="rs" data-rs="r" title="Reset putaran">↺</button></label>'+
@@ -172,6 +194,8 @@
     $('#stkR').oninput=function(){var s=selected&&W(selected);if(!s)return;s.r=+this.value;refreshEl(selected);syncControls();};
     $('#stkX').oninput=function(){var s=selected&&W(selected);if(!s)return;s.sx=+this.value;refreshEl(selected);syncControls();};
     $('#stkY').oninput=function(){var s=selected&&W(selected);if(!s)return;s.sy=+this.value;refreshEl(selected);syncControls();};
+    $('#stkLink').oninput=function(){var s=selected&&W(selected);if(!s)return;s.link=this.value;refreshEl(selected);};
+    $('#stkText').oninput=function(){var s=selected&&W(selected);if(!s)return;s.text=this.value;refreshEl(selected);};
     $('#stkDel').onclick=function(){if(!selected)return;delete draft[selected];selected=null;render(draft);syncControls();};
     $('#stkCancel').onclick=function(){stopEdit();};
     $('#stkSave').onclick=save;
@@ -265,8 +289,13 @@
     var ids=stackedIds(),stackIndex=ids.indexOf(selected);
     $('#stkFront').disabled=!s||stackIndex===ids.length-1;
     $('#stkBack').disabled=!s||stackIndex<=0;
-    if(s){w.value=s.w;r.value=s.r;x.value=s.sx||1;y.value=s.sy||1;$('#stkWv').textContent=Math.round(s.w)+'%';$('#stkRv').textContent=Math.round(s.r)+'\u00b0';$('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';$('#stkYv').textContent=Math.round((s.sy||1)*100)+'%';}
-    else{$('#stkWv').textContent='';$('#stkRv').textContent='';$('#stkXv').textContent='';$('#stkYv').textContent='';}
+    if(s){
+      w.value=s.w;r.value=s.r;x.value=s.sx||1;y.value=s.sy||1;
+      $('#stkLink').value=s.link||'';
+      $('#stkText').value=s.text||'';
+      $('#stkWv').textContent=Math.round(s.w)+'%';$('#stkRv').textContent=Math.round(s.r)+'\u00b0';$('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';$('#stkYv').textContent=Math.round((s.sy||1)*100)+'%';
+    }
+    else{$('#stkLink').value='';$('#stkText').value='';$('#stkWv').textContent='';$('#stkRv').textContent='';$('#stkXv').textContent='';$('#stkYv').textContent='';}
     layer.querySelectorAll('.h4sx-sticker').forEach(function(el){el.classList.toggle('selected',el.dataset.id===selected);});
   }
   function select(id){selected=id;syncControls();}
