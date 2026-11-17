@@ -53,7 +53,16 @@ body.sticker-edit .h4sx-sticker.selected .stk-h{display:block;pointer-events:aut
 @media (min-width: 1024px) {
   html { touch-action: none; }
 }
-/* Mobile: Zoom 90% by default */
+/* Tablet: Responsive */
+@media (max-width: 1023px) and (min-width: 600px) {
+  .h4sx-sticker .stk-text {
+    font-size: clamp(12px, 3vw, 22px) !important;
+  }
+}
+/* Mobile: Zoom 90% by default + responsive text */
 @media (max-width: 600px) {
   html { zoom: 0.9; transform-origin: top left; }
+  .h4sx-sticker .stk-text {
+    font-size: clamp(10px, 2.5vw, 18px) !important;
+  }
 }

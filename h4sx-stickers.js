@@ -35,6 +35,12 @@
     if(!c.textSize)c.textSize=s.textSize||24;
     if(!c.textColor)c.textColor=s.textColor||'#ffffff';
     if(!c.textStyle)c.textStyle=s.textStyle||'glow';
+    // Scale positioning untuk device yang berbeda
+    var currentW=wrapW();
+    if(currentW!==REF_W){
+      c.x=num(c.x*currentW/REF_W,-30,130,c.x);
+      c.w=num(c.w*currentW/REF_W,4,90,c.w);
+    }
     return c;
   }
   function R(id){return eff(draft[id]);}
