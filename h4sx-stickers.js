@@ -1,7 +1,7 @@
 /* H4SX stickers + signature. Independent of app.js; uses the same Firebase app. */
 (function(){
   'use strict';
-  var MAX=40, CACHE='h4sx_data_cache', PATH='gateway_data/settings/stickers';
+  var MAX=40, REF_WIDTH=720, CACHE='h4sx_data_cache', PATH='gateway_data/settings/stickers';
   var layer=null, wrap=null, ref=null, saved={}, draft=null, selected=null, editing=false, editDevice=null, originalWrapStyle=null;
 
   function safeUrl(v){
@@ -21,7 +21,7 @@
     });
     return out;
   }
-  /* Satu layout responsive untuk semua device. X dan width kekal dalam %, Y ikut tinggi card. */
+  /* Sticker width stays in CSS pixels across devices; positions remain relative to the page. */
   var DEVNAME={d:'PC',t:'Tablet',m:'Phone'};
   function viewportDev(){var w=window.innerWidth;return w>=1024?'d':w>=600?'t':'m';}
   function dev(){return viewportDev();}
@@ -47,7 +47,7 @@
     layer.querySelectorAll('.h4sx-sticker').forEach(function(el){var s=saved[el.dataset.id];if(s)place(el,eff(s));});
   }
   function place(el,s){
-    el.style.left=s.x+'%';el.style.top=s.y+'px';el.style.width=s.w+'%';
+    el.style.left=s.x+'%';el.style.top=s.y+'px';el.style.width=(s.w*REF_WIDTH/100)+'px';
     el.style.zIndex=String(s.z||0);
     el.style.transform='translate(-50%,0) rotate('+s.r+'deg) scaleX('+(s.sx||1)+') scaleY('+(s.sy||1)+')';
     el.style.setProperty('--isx',String(1/(s.sx||1)));el.style.setProperty('--isy',String(1/(s.sy||1)));
@@ -157,7 +157,7 @@
     panel=document.createElement('div');panel.className='sticker-panel';panel.hidden=true;
     panel.innerHTML='<div class="sticker-panel-head" id="stkPanelDrag"><h3>Sticker H4SX</h3><span>⠿ Seret panel</span></div>'+
       '<p class="hint" id="stkDev"></p>'+
-      '<p class="hint">Semua sticker guna satu struktur base untuk semua device. Set sekali, terus sama di phone / tablet / PC.</p>'+
+      '<p class="hint">Saiz sticker yang disimpan kekal sama di phone / tablet / PC. Kedudukan ikut lebar halaman.</p>'+
       '<p class="hint">Tampal link HTTPS gambar/GIF/PNG/WebP, tekan Tambah. Seret sticker untuk alih posisi. Pilih sticker, kemudian tarik bulatan biru di tepi untuk regang.</p>'+
       '<div class="row"><input class="form-input" id="stkUrl" type="url" placeholder="https://.../sticker.png"><button type="button" class="btn btn-primary" id="stkAdd">Tambah</button></div>'+
       '<div class="row" style="margin-top:10px"><input class="form-input" id="stkLink" type="url" placeholder="Pautan Link (pilihan)"><input class="form-input" id="stkText" type="text" placeholder="Text Sticker (pilihan)"></div>'+
@@ -290,7 +290,7 @@
       $('#stkTextSizeV').textContent=(s.textSize||24)+'px';
       $('#stkTextColor').value=/^#[0-9a-f]{6}$/i.test(s.textColor||'')?s.textColor:'#ffffff';
       $('#stkTextStyle').value=['glow','solid','outline','gradient'].includes(s.textStyle)?s.textStyle:'glow';
-      $('#stkWv').textContent=Math.round(s.w)+'%';$('#stkRv').textContent=Math.round(s.r)+'\u00b0';$('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';$('#stkYv').textContent=Math.round((s.sy||1)*100)+'%';
+      $('#stkWv').textContent=Math.round(s.w*REF_WIDTH/100)+'px';$('#stkRv').textContent=Math.round(s.r)+'\u00b0';$('#stkXv').textContent=Math.round((s.sx||1)*100)+'%';$('#stkYv').textContent=Math.round((s.sy||1)*100)+'%';
     }
     else{$('#stkLink').value='';$('#stkText').value='';$('#stkWv').textContent='';$('#stkRv').textContent='';$('#stkXv').textContent='';$('#stkYv').textContent='';}
     layer.querySelectorAll('.h4sx-sticker').forEach(function(el){el.classList.toggle('selected',el.dataset.id===selected);});

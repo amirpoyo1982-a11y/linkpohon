@@ -17,6 +17,10 @@ body:not(.mobile-lite):not(.effects-no-motion) #profileName.has-name-gradient{an
 [data-theme=light] .h4sx-badge{--bt:#2b1a3a}
 body.mobile-lite .h4sx-badge{box-shadow:none}
 
+.avatar-frame{position:absolute;inset:-14%;z-index:3;pointer-events:none;display:grid;place-items:center}
+.avatar-frame[hidden]{display:none}
+.avatar-frame img{display:block;width:100%;height:100%;object-fit:contain}
+
 /* Admin form */
 .h4sx-pstyle{padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--accent-soft);margin:6px 0 16px}
 .h4sx-pstyle h4{margin:0 0 10px;font:800 14px Syne,sans-serif}
@@ -24,3 +28,6 @@ body.mobile-lite .h4sx-badge{box-shadow:none}
 .h4sx-pstyle input[type=color]{width:46px;height:38px;padding:3px;border:1px solid var(--border);border-radius:9px;background:var(--bg2);cursor:pointer}
 .h4sx-pstyle label.ck{display:flex;align-items:center;gap:8px;min-height:36px;font-size:13px}
 .h4sx-pstyle input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.h4sx-pstyle .frame-label{display:block;margin:10px 0 6px;font-size:13px}
+.h4sx-pstyle .frame-url{width:100%;margin-bottom:4px}
+.h4sx-pstyle .frame-help{display:block;color:var(--muted);font-size:11px;margin:0 0 8px}
