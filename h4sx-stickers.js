@@ -21,11 +21,11 @@
     });
     return out;
   }
-  /* Device layouts: all devices share the same base layout now. */
-  var REF_W=720, DEVNAME={d:'PC',t:'Tablet',m:'Phone'}, PREVIEW_W={t:768,m:390};
+  /* Satu layout responsive untuk semua device. X dan width kekal dalam %, Y ikut tinggi card. */
+  var DEVNAME={d:'PC',t:'Tablet',m:'Phone'};
   function viewportDev(){var w=window.innerWidth;return w>=1024?'d':w>=600?'t':'m';}
-  function dev(){return 'd';}
-  function wrapW(){return (wrap&&wrap.getBoundingClientRect().width)||REF_W;}
+  function dev(){return viewportDev();}
+  function wrapW(){return (wrap&&wrap.getBoundingClientRect().width)||720;}
   function defW(){return 22;}
   function eff(s){
     var c=view(s);
@@ -35,12 +35,6 @@
     if(!c.textSize)c.textSize=s.textSize||24;
     if(!c.textColor)c.textColor=s.textColor||'#ffffff';
     if(!c.textStyle)c.textStyle=s.textStyle||'glow';
-    // Scale positioning untuk device yang berbeda
-    var currentW=wrapW();
-    if(currentW!==REF_W){
-      c.x=num(c.x*currentW/REF_W,-30,130,c.x);
-      c.w=num(c.w*currentW/REF_W,4,90,c.w);
-    }
     return c;
   }
   function R(id){return eff(draft[id]);}
@@ -150,18 +144,6 @@
     saved=cached();render(saved);
     var rt=null;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(editing){render(draft);}else relayout();},120);});
     window.addEventListener('orientationchange',function(){setTimeout(relayout,250);});
-    // Zoom lock: desktop = 100%, mobile = 90%
-    function applyZoomLock(){
-      if(window.innerWidth>=1024){
-        document.documentElement.style.zoom='1';
-      }else if(window.innerWidth<600){
-        document.documentElement.style.zoom='0.9';
-      }
-    }
-    applyZoomLock();
-    window.addEventListener('resize',applyZoomLock);
-    window.addEventListener('wheel',function(e){if(e.ctrlKey){e.preventDefault();}},{ passive:false});
-    window.addEventListener('touchstart',function(e){if(e.touches.length>1){e.preventDefault();}},{ passive:false});
     whenFirebase(function(){listen();initEditor();});
   }
   var panel=null, fab=null;
@@ -226,7 +208,7 @@
     if(editing||!panel)return;
     var m=document.getElementById('adminModal');
     if(m&&m.classList.contains('active')){var c=document.getElementById('closeModal');if(c)c.click();}
-    draft=JSON.parse(JSON.stringify(saved));selected=null;editDevice='d';editing=true;
+    draft=JSON.parse(JSON.stringify(saved));selected=null;editDevice=viewportDev();editing=true;
     originalWrapStyle={width:wrap.style.width,maxWidth:wrap.style.maxWidth,boxSizing:wrap.style.boxSizing};
     resetPanelPosition();
     document.body.classList.add('sticker-edit');panel.hidden=false;
@@ -238,12 +220,7 @@
     document.body.classList.remove('sticker-edit');if(panel)panel.hidden=true;
     render(saved);
   }
-  function setDevicePreview(){
-    if(!editing||!wrap)return;
-    var width=PREVIEW_W[editDevice];
-    if(width){wrap.style.width=width+'px';wrap.style.maxWidth='none';wrap.style.boxSizing='border-box';}
-    else if(originalWrapStyle){wrap.style.width=originalWrapStyle.width;wrap.style.maxWidth=originalWrapStyle.maxWidth;wrap.style.boxSizing=originalWrapStyle.boxSizing;}
-  }
+  function setDevicePreview(){return;}
   function resetPanelPosition(){
     panel.style.left='';panel.style.top='';panel.style.right='';panel.style.bottom='';panel.style.transform='';
   }
@@ -294,7 +271,7 @@
     var box=$('#stkThumbs');box.replaceChildren();
     Object.keys(draft).forEach(function(id){
       var b=document.createElement('button');b.type='button';b.title='Pilih';
-      b.style.backgroundImage='url("'+draft[id].url.replace(/"/g,'%22')+'")';
+      b.style.backgroundImage=draft[id].url?'url("'+draft[id].url.replace(/"/g,'%22')+'")':'none';
       if(id===selected)b.className='on';
       b.onclick=function(){select(id);};box.appendChild(b);
     });

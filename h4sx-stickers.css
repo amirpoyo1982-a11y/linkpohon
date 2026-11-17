@@ -49,20 +49,14 @@ body.sticker-edit .h4sx-sticker.selected .stk-h{display:block;pointer-events:aut
 .stk-h.r{left:100%;top:50%;cursor:ew-resize}
 .stk-h.t{left:50%;top:0;cursor:ns-resize}
 .stk-h.b{left:50%;top:100%;cursor:ns-resize}
-/* Desktop: lock zoom to 100% minimum (desktop mode) */
-@media (min-width: 1024px) {
-  html { touch-action: none; }
-}
-/* Tablet: Responsive */
+/* Responsive text tanpa paksa zoom seluruh page. */
 @media (max-width: 1023px) and (min-width: 600px) {
   .h4sx-sticker .stk-text {
-    font-size: clamp(12px, 3vw, 22px) !important;
+    max-width: 100%;
   }
 }
-/* Mobile: Zoom 90% by default + responsive text */
 @media (max-width: 600px) {
-  html { zoom: 0.9; transform-origin: top left; }
   .h4sx-sticker .stk-text {
-    font-size: clamp(10px, 2.5vw, 18px) !important;
+    max-width: 100%;
   }
 }
